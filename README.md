@@ -1,4 +1,4 @@
-# Moire Line Ruler
+# Moire Twist Ruler
 
 Measure the moire domain length and twist angle of twisted 2D bilayers by drawing
 one line per image. A single HTML page: no install, no server, and your images
@@ -8,7 +8,7 @@ never leave your computer.
 
 ## Use it
 
-- **Online:** open the GitHub Pages site for this repo (Settings > Pages > deploy from `main`, root), or
+- **Online:** https://will700.github.io/moire-twist-ruler/ (demo with examples: https://will700.github.io/moire-twist-ruler/#examples), or
 - **Offline:** download `index.html` and open it in any modern browser.
 
 1. **Open images** (or drag them onto the page). PNG, JPEG and WebP work directly;
@@ -56,6 +56,16 @@ next to yours so you can check your technique.
 This writes one PNG per image (lightly detrended and contrast-stretched) and a
 `scales.csv` with the pixel size read from each file's calibration. Open the PNGs and
 the CSV together in the page.
+
+## Background
+
+Low-angle twisted bilayers of transition metal dichalcogenides relax into domains of
+commensurate stacking separated by domain walls, and the domain period grows as the
+twist falls. See Weston et al., "Atomic reconstruction in twisted bilayers of
+transition metal dichalcogenides", Nature Nanotechnology 15, 592 (2020),
+https://doi.org/10.1038/s41565-020-0682-9 (preprint: https://arxiv.org/abs/1911.12664).
+The example images here are synthetic and rigid (no relaxation); no published or
+unpublished experimental data is included in this repository.
 
 ## Privacy
 
