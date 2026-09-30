@@ -1,20 +1,71 @@
 [
  {
+  "file": "vanwinkle2023_DS14_MoS2_parallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 0.818,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS14",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
+  "file": "vanwinkle2023_DS13_MoS2_parallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 0.856,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS13",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
+  "file": "vanwinkle2023_DS25_MoS2_antiparallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 0.771,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS25",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
+  "file": "vanwinkle2023_DS7_MoS2_parallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 1.227,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS7",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
+  "file": "vanwinkle2023_DS22_MoS2_antiparallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 1.688,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS22",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
+  "file": "vanwinkle2023_DS5_MoS2_parallel.png",
+  "nm_per_px": 0.125,
+  "true_twist_deg": 1.769,
+  "ref_label": "published fit, Van Winkle et al. 2023 DS5",
+  "lattice_nm": 0.315,
+  "source": "doi:10.5281/zenodo.7779105 (CC BY 4.0)"
+ },
+ {
   "file": "synthetic_twist_1.0deg.png",
   "nm_per_px": 0.068359,
   "true_twist_deg": 1.0,
-  "true_L_nm": 18.066
+  "true_L_nm": 18.066,
+  "ref_label": "synthetic ground truth"
  },
  {
   "file": "synthetic_twist_2.5deg.png",
   "nm_per_px": 0.039062,
   "true_twist_deg": 2.5,
-  "true_L_nm": 7.227
+  "true_L_nm": 7.227,
+  "ref_label": "synthetic ground truth"
  },
  {
   "file": "synthetic_twist_4.0deg.png",
   "nm_per_px": 0.024414,
   "true_twist_deg": 4.0,
-  "true_L_nm": 4.517
+  "true_L_nm": 4.517,
+  "ref_label": "synthetic ground truth"
  }
 ]

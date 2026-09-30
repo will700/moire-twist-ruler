@@ -1,4 +1,10 @@
-filename,nm_per_px,true_twist_deg,true_L_nm
-synthetic_twist_1.0deg.png,0.068359,1.0,18.066
-synthetic_twist_2.5deg.png,0.039062,2.5,7.227
-synthetic_twist_4.0deg.png,0.024414,4.0,4.517
+filename,nm_per_px,true_twist_deg
+synthetic_twist_1.0deg.png,0.068359,1.0
+synthetic_twist_2.5deg.png,0.039062,2.5
+synthetic_twist_4.0deg.png,0.024414,4.0
+vanwinkle2023_DS14_MoS2_parallel.png,0.125,0.818
+vanwinkle2023_DS13_MoS2_parallel.png,0.125,0.856
+vanwinkle2023_DS25_MoS2_antiparallel.png,0.125,0.771
+vanwinkle2023_DS7_MoS2_parallel.png,0.125,1.227
+vanwinkle2023_DS22_MoS2_antiparallel.png,0.125,1.688
+vanwinkle2023_DS5_MoS2_parallel.png,0.125,1.769

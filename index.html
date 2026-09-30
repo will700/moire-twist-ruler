@@ -91,7 +91,7 @@ footer a{color:var(--muted)}
         <div class="readout" style="margin-top:8px">
           <span>twist</span><span id="rTw">-</span>
           <span>line</span><span id="rLine">-</span>
-          <span id="rTrueK" hidden>true</span><span id="rTrue" hidden></span>
+          <span id="rTrueK" hidden>reference</span><span id="rTrue" hidden></span>
         </div>
       </div>
       <div class="row num">
@@ -173,15 +173,15 @@ function calc(im) {
 function parseScales(text) {
   const out = {}; const lines = text.trim().split(/\r?\n/); if (!lines.length) return out;
   const head = lines[0].split(",").map(s => s.trim().toLowerCase());
-  const fi = head.indexOf("filename"), si = head.indexOf("nm_per_px"), ti = head.indexOf("true_twist_deg");
+  const fi = head.indexOf("filename"), si = head.indexOf("nm_per_px"), ti = head.indexOf("true_twist_deg"), li = head.indexOf("ref_label");
   if (fi < 0 || si < 0) { status("scales.csv needs the columns filename,nm_per_px", true); return out; }
-  lines.slice(1).forEach(l => { const c = l.split(","); if (c[fi]) out[c[fi].trim()] = { s: parseFloat(c[si]), t: ti >= 0 ? parseFloat(c[ti]) : NaN }; });
+  lines.slice(1).forEach(l => { const c = l.split(","); if (c[fi]) out[c[fi].trim()] = { s: parseFloat(c[si]), t: ti >= 0 ? parseFloat(c[ti]) : NaN, l: li >= 0 ? c[li] : "" }; });
   return out;
 }
 let pendingScales = {};
 function applyScales(map) {
   Object.assign(pendingScales, map);
-  IM.forEach(im => { const m = pendingScales[im.name]; if (m) { if (m.s > 0 && store.scales[im.name] == null) im.scale = m.s; if (m.t > 0) im.trueTwist = m.t; } });
+  IM.forEach(im => { const m = pendingScales[im.name]; if (m) { if (m.s > 0 && store.scales[im.name] == null) im.scale = m.s; if (m.t > 0) { im.trueTwist = m.t; im.refLabel = m.l || "reference"; } } });
 }
 function addImage(name, url) {
   return new Promise(res => {
@@ -212,8 +212,7 @@ $("examples").onclick = async () => {
   try {
     const man = await (await fetch("examples/manifest.json")).json();
     for (const m of man) await addImage(m.file, "examples/" + m.file);
-    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg }])));
-    IM.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg, l: m.ref_label }])));
     $("drop").hidden = true; cv.hidden = false; go(0);
   } catch (e) { status("examples load when the page is served (GitHub Pages or python -m http.server); from a local file, open examples/ with Open images", true); }
 };
@@ -284,7 +283,7 @@ function panel(full = true) {
   $("rTw").textContent = c && isFinite(c.tw) ? c.tw.toFixed(2) + " deg" : "-";
   $("rLine").textContent = c ? `${c.len.toFixed(1)} nm over ${s.n}` : "-";
   const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
-  if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (synthetic ground truth)`;
+  if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (${im.refLabel})`;
   if (document.activeElement !== $("nPer")) $("nPer").value = s.n || 1;
   $("skip").checked = !!s.skip; $("skipBox").classList.toggle("on", !!s.skip);
   if (document.activeElement !== $("note")) $("note").value = s.note || "";
