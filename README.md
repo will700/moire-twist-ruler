@@ -8,7 +8,23 @@ uploaded anywhere.
 **Open it:** https://will700.github.io/moire-twist-ruler/ (or try it with example data:
 https://will700.github.io/moire-twist-ruler/#examples)
 
-![twisted bilayer MoS2 domain network](examples/vanwinkle2023_DS14_MoS2_parallel.png)
+![the ruler: a line drawn across three domains of a twisted MoS2 bilayer, giving L = 20.5 nm and 0.88 deg](docs/img/screenshot.png)
+
+Draw a line from node to node, say how many domains it spans, and you get the domain
+length L and the twist. Every image ends up as one row of a CSV:
+
+| image | use | line (nm) | periods | L (nm) | twist (deg) | note |
+|---|---|---|---|---|---|---|
+| DS14_MoS2_parallel | yes | 74.6 | 3 | 24.87 | 0.73 |  |
+| DS13_MoS2_parallel | yes | 61.6 | 3 | 20.54 | 0.88 |  |
+| DS25_MoS2_antiparallel | no | 65.6 | 3 | 21.85 | 0.83 | demo of an excluded image |
+| DS7_MoS2_parallel | yes | 30.1 | 2 | 15.04 | 1.20 |  |
+| DS22_MoS2_antiparallel | yes | 21.8 | 2 | 10.88 | 1.66 |  |
+| DS5_MoS2_parallel | yes | 38.8 | 4 | 9.70 | 1.87 |  |
+
+(From the example images: [full CSV](docs/img/example_output.csv). The published twists for
+these samples are 0.82, 0.86, 0.77, 1.23, 1.69 and 1.77 deg; single-direction readings
+spread a little because the samples carry some heterostrain.)
 
 ## How to use it
 

@@ -1,0 +1,7 @@
+n,image,nm_per_px,use,line_nm,periods,L_nm,twist_deg,lattice_a_nm,x0_px,y0_px,x1_px,y1_px,note
+1,vanwinkle2023_DS14_MoS2_parallel.png,0.125,yes,74.600,3,24.867,0.728,0.316,178.0,241.0,600.0,663.0,
+2,vanwinkle2023_DS13_MoS2_parallel.png,0.125,yes,61.610,3,20.537,0.882,0.316,267.0,406.0,749.0,303.0,
+3,vanwinkle2023_DS25_MoS2_antiparallel.png,0.125,no,65.561,3,21.854,0.828,0.316,49.0,529.0,571.0,580.0,demo of an excluded image
+4,vanwinkle2023_DS7_MoS2_parallel.png,0.125,yes,30.079,2,15.040,1.204,0.316,174.0,116.0,202.0,355.0,
+5,vanwinkle2023_DS22_MoS2_antiparallel.png,0.125,yes,21.768,2,10.884,1.664,0.316,182.0,278.0,351.0,236.0,
+6,vanwinkle2023_DS5_MoS2_parallel.png,0.125,yes,38.788,4,9.697,1.867,0.316,80.0,263.0,369.0,150.0,
