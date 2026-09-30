@@ -92,6 +92,7 @@ footer a{color:var(--muted)}
           <span>twist</span><span id="rTw">-</span>
           <span>line</span><span id="rLine">-</span>
           <span id="rTrueK" hidden>reference</span><span id="rTrue" hidden></span>
+          <span id="rSrcK" hidden>data</span><span id="rSrc" hidden></span>
         </div>
       </div>
       <div class="row num">
@@ -181,7 +182,7 @@ function parseScales(text) {
 let pendingScales = {};
 function applyScales(map) {
   Object.assign(pendingScales, map);
-  IM.forEach(im => { const m = pendingScales[im.name]; if (m) { if (m.s > 0 && store.scales[im.name] == null) im.scale = m.s; if (m.t > 0) { im.trueTwist = m.t; im.refLabel = m.l || "reference"; } } });
+  IM.forEach(im => { const m = pendingScales[im.name]; if (m) { if (m.s > 0 && store.scales[im.name] == null) im.scale = m.s; if (m.t > 0) { im.trueTwist = m.t; im.refLabel = m.l || "reference"; } if (m.src) im.source = m.src; } });
 }
 function addImage(name, url) {
   return new Promise(res => {
@@ -212,7 +213,7 @@ $("examples").onclick = async () => {
   try {
     const man = await (await fetch("examples/manifest.json")).json();
     for (const m of man) await addImage(m.file, "examples/" + m.file);
-    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg, l: m.ref_label }])));
+    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg, l: m.ref_label, src: m.source }])));
     $("drop").hidden = true; cv.hidden = false; go(0);
   } catch (e) { status("examples load when the page is served (GitHub Pages or python -m http.server); from a local file, open examples/ with Open images", true); }
 };
@@ -284,6 +285,7 @@ function panel(full = true) {
   $("rLine").textContent = c ? `${c.len.toFixed(1)} nm over ${s.n}` : "-";
   const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
   if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (${im.refLabel})`;
+  $("rSrcK").hidden = $("rSrc").hidden = !im.source; if (im.source) $("rSrc").textContent = im.source;
   if (document.activeElement !== $("nPer")) $("nPer").value = s.n || 1;
   $("skip").checked = !!s.skip; $("skipBox").classList.toggle("on", !!s.skip);
   if (document.activeElement !== $("note")) $("note").value = s.note || "";

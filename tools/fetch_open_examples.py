@@ -62,7 +62,7 @@ def main():
         im.save(os.path.join(OUT, fn), optimize=True)
         rows.append(dict(file=fn, nm_per_px=round(px / UP, 6), true_twist_deg=round(tw, 3),
                          ref_label=f"published fit, Van Winkle et al. 2023 {s}", lattice_nm=0.315,
-                         source="doi:10.5281/zenodo.7779105 (CC BY 4.0)"))
+                         source="public: Van Winkle et al. 2023, doi:10.5281/zenodo.7779105, CC BY 4.0"))
         print(fn, f"{a.shape[0] * px:.0f} nm field, published twist {tw:.3f} deg")
     return rows
 
