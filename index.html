@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Moire Line Ruler</title>
+<title>Moire Twist Ruler</title>
 <meta name="description" content="Measure moire domain length and twist angle by drawing one line per image. Runs entirely in your browser; images never leave your computer.">
 <style>
 :root{--bg:#0f1215;--panel:#171b20;--panel2:#1e242b;--ink:#e6e9ec;--muted:#8e98a3;--line:#2b333c;--accent:#ffd23f;--accent-ink:#1a1400;
@@ -66,7 +66,7 @@ footer a{color:var(--muted)}
 <div class="wrap">
   <div class="top">
     <div>
-      <h1 id="title">Moire Line Ruler</h1>
+      <h1 id="title">Moire Twist Ruler</h1>
       <div class="meta" id="meta">Open images to start. Nothing is uploaded: images stay on your computer.</div>
     </div>
     <div class="nav">
@@ -153,7 +153,7 @@ const $ = id => document.getElementById(id);
 const cv = $("cv"), ctx = cv.getContext("2d");
 const IM = [];          // {name, url, w, h, img, scale, trueTwist}
 let cur = 0, zoom = 1, W = 600;
-const KEY = "moire-line-ruler/v1";
+const KEY = "moire-twist-ruler/v1";
 let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "" };
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
