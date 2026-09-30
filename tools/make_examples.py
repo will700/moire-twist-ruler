@@ -1,0 +1,59 @@
+"""Generate synthetic twisted-bilayer moire images with a known twist, for trying
+and checking the ruler. Rigid model: two hexagonal lattices (a = 0.3153 nm,
+WS2-like) rotated by +theta/2 and -theta/2, Gaussian atoms, intensity summed and
+blurred like a low-magnification ADF image, Poisson noise added.
+
+The AA-to-AA moire period is L = a / (2 sin(theta / 2)).
+
+    python tools/make_examples.py            (needs numpy, scipy, pillow)
+Writes examples/*.png, examples/scales.csv, examples/manifest.json.
+"""
+import os, json, math
+import numpy as np
+from scipy.ndimage import gaussian_filter
+from PIL import Image
+
+A = 0.3153                     # nm, in-plane lattice constant
+N = 1024                       # pixels
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "examples")
+CASES = [  # name, twist deg, field of view nm, seed
+    ("synthetic_twist_1.0deg", 1.0, 70.0, 1),
+    ("synthetic_twist_2.5deg", 2.5, 40.0, 2),
+    ("synthetic_twist_4.0deg", 4.0, 25.0, 3),
+]
+
+def lattice_image(theta_deg, fov, rng):
+    px = fov / N
+    y, x = (np.mgrid[0:N, 0:N] + 0.5) * px
+    img = np.zeros((N, N))
+    # atoms rendered analytically as the sum of three cosines (the first Fourier
+    # order of a hexagonal lattice of Gaussian atoms); cheap and exact enough here
+    q = 4 * math.pi / (math.sqrt(3) * A)
+    for sgn in (+1, -1):
+        rot = math.radians(sgn * theta_deg / 2 + 7.0)
+        for k in range(3):
+            t = rot + k * 2 * math.pi / 3
+            img += np.cos(q * (x * math.cos(t) + y * math.sin(t)))
+    img = np.exp(0.9 * img / 3.0)            # nonlinear contrast: AA stacking bright, AB/BA darker
+    img = gaussian_filter(img, 0.35 * A / px)  # probe blur (atoms still just resolved)
+    img = (img - img.min()) / (img.max() - img.min())
+    img = rng.poisson(img * 150 + 20).astype(float)
+    return img, px
+
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    man, rows = [], ["filename,nm_per_px,true_twist_deg,true_L_nm"]
+    for name, th, fov, seed in CASES:
+        img, px = lattice_image(th, fov, np.random.default_rng(seed))
+        a8 = (np.clip((img - np.percentile(img, 0.5)) / (np.percentile(img, 99.5) - np.percentile(img, 0.5)), 0, 1) * 255).astype(np.uint8)
+        fn = name + ".png"
+        Image.fromarray(a8).save(os.path.join(OUT, fn), optimize=True)
+        L = A / (2 * math.sin(math.radians(th) / 2))
+        rows.append(f"{fn},{px:.6f},{th},{L:.3f}")
+        man.append(dict(file=fn, nm_per_px=round(px, 6), true_twist_deg=th, true_L_nm=round(L, 3)))
+        print(fn, f"L = {L:.2f} nm, {fov / L:.1f} periods across the field")
+    open(os.path.join(OUT, "scales.csv"), "w").write("\n".join(rows) + "\n")
+    json.dump(man, open(os.path.join(OUT, "manifest.json"), "w"), indent=1)
+
+if __name__ == "__main__":
+    main()

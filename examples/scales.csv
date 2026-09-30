@@ -1,0 +1,4 @@
+filename,nm_per_px,true_twist_deg,true_L_nm
+synthetic_twist_1.0deg.png,0.068359,1.0,18.066
+synthetic_twist_2.5deg.png,0.039062,2.5,7.227
+synthetic_twist_4.0deg.png,0.024414,4.0,4.517

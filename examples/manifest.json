@@ -1,0 +1,20 @@
+[
+ {
+  "file": "synthetic_twist_1.0deg.png",
+  "nm_per_px": 0.068359,
+  "true_twist_deg": 1.0,
+  "true_L_nm": 18.066
+ },
+ {
+  "file": "synthetic_twist_2.5deg.png",
+  "nm_per_px": 0.039062,
+  "true_twist_deg": 2.5,
+  "true_L_nm": 7.227
+ },
+ {
+  "file": "synthetic_twist_4.0deg.png",
+  "nm_per_px": 0.024414,
+  "true_twist_deg": 4.0,
+  "true_L_nm": 4.517
+ }
+]

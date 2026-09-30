@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.DS_Store
+# keep your own microscope data out of the repo
+data/
+private/
+*.dm3
+*.dm4
+*.emd
+*.mib
+*.hdf5
+*.h5

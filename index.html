@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moire Line Ruler</title>
+<meta name="description" content="Measure moire domain length and twist angle by drawing one line per image. Runs entirely in your browser; images never leave your computer.">
+<style>
+:root{--bg:#0f1215;--panel:#171b20;--panel2:#1e242b;--ink:#e6e9ec;--muted:#8e98a3;--line:#2b333c;--accent:#ffd23f;--accent-ink:#1a1400;
+--ok:#6fcf97;--skip:#e07a6a;--ghost:#4fc3f7;
+--mono:ui-monospace,"SFMono-Regular","Cascadia Mono","DejaVu Sans Mono",Menlo,monospace;
+--body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:14px/1.45 var(--body);padding:14px 16px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:grid;gap:14px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+h1{font-size:1.05rem;font-weight:600;margin:0}
+.meta{font:.8rem var(--mono);color:var(--muted)}
+.nav{display:flex;gap:6px;align-items:center;margin-left:auto}
+button,select,input{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:6px 11px}
+button{cursor:pointer}button:hover{border-color:var(--muted)}button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.count{font:500 .85rem var(--mono);color:var(--muted);min-width:5.5em;text-align:center}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:14px;align-items:start}
+@media (max-width:880px){.main{grid-template-columns:1fr}}
+.stage{background:#000;border:1px solid var(--line);border-radius:6px;overflow:auto;max-height:84vh;position:relative;min-height:320px}
+.drop{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);padding:24px}
+.drop.over{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.drop b{color:var(--ink)}
+canvas{display:block;touch-action:none;cursor:crosshair}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:14px}
+.lbl{font:500 .7rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.big{font:500 1.9rem var(--mono);font-variant-numeric:tabular-nums;line-height:1.1}
+.big small{font-size:.9rem;color:var(--muted)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.num input{width:5.2em;text-align:center;font-family:var(--mono)}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font:.85rem var(--mono);font-variant-numeric:tabular-nums}
+.readout span:nth-child(odd){color:var(--muted)}
+.skip{display:flex;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:5px;cursor:pointer}
+.skip.on{border-color:var(--skip);background:color-mix(in srgb,var(--skip) 14%,transparent)}
+.skip input{accent-color:var(--skip);width:17px;height:17px}
+.help{font-size:.82rem;color:var(--muted);margin:0}
+.help b{color:var(--ink);font-weight:500}
+.zoom button.on{border-color:var(--accent);color:var(--accent)}
+.status{font:.75rem var(--mono);color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+.tblwrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.84rem}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font:500 .68rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--panel2)}
+tbody tr.cur{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.chip{font:500 .7rem var(--mono);padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.chip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.chip.sk{color:var(--skip);border-color:color-mix(in srgb,var(--skip) 50%,transparent)}
+.warn{color:var(--skip)}
+footer{font-size:.78rem;color:var(--muted)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1 id="title">Moire Line Ruler</h1>
+      <div class="meta" id="meta">Open images to start. Nothing is uploaded: images stay on your computer.</div>
+    </div>
+    <div class="nav">
+      <button id="open" type="button">Open images</button>
+      <input id="files" type="file" accept="image/*,.csv" multiple hidden>
+      <button id="examples" type="button">Load examples</button>
+      <button id="prev" aria-label="Previous image">&larr;</button>
+      <span class="count" id="count">0 / 0</span>
+      <button id="next" aria-label="Next image">&rarr;</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <canvas id="cv" hidden></canvas>
+      <div class="drop" id="drop"><div><b>Drop images here</b> (PNG, JPEG, WebP)<br>or use Open images. Add a <code>scales.csv</code> (filename,nm_per_px) to set every scale at once.</div></div>
+    </div>
+    <aside class="side">
+      <div>
+        <div class="lbl">Domain length L</div>
+        <div class="big" id="bigL">-</div>
+        <div class="readout" style="margin-top:8px">
+          <span>twist</span><span id="rTw">-</span>
+          <span>line</span><span id="rLine">-</span>
+          <span id="rTrueK" hidden>true</span><span id="rTrue" hidden></span>
+        </div>
+      </div>
+      <div class="row num">
+        <span class="lbl" style="flex-basis:100%">Periods along the line</span>
+        <button id="nDown" aria-label="Fewer periods">&minus;</button>
+        <input id="nPer" type="number" min="1" max="99" step="1" value="1" aria-label="Periods along the line">
+        <button id="nUp" aria-label="More periods">+</button>
+      </div>
+      <label class="skip" id="skipBox"><input type="checkbox" id="skip"> Don't use this one</label>
+      <input id="note" type="text" placeholder="note (optional)" aria-label="Note">
+      <hr>
+      <div class="row num">
+        <span class="lbl" style="flex-basis:100%">Pixel size (nm per pixel)</span>
+        <input id="scale" type="number" min="0" step="any" style="width:8em" aria-label="Pixel size in nm per pixel">
+        <button id="scaleAll" type="button">Apply to all</button>
+        <span class="status" id="scaleInfo" style="flex-basis:100%"></span>
+      </div>
+      <div class="row">
+        <span class="lbl" style="flex-basis:100%">Lattice constant a</span>
+        <select id="mat" aria-label="Material">
+          <option value="0.3153">WS2 (0.3153 nm)</option>
+          <option value="0.3160">MoS2 (0.3160 nm)</option>
+          <option value="0.3282">WSe2 (0.3282 nm)</option>
+          <option value="0.3288">MoSe2 (0.3288 nm)</option>
+          <option value="0.2460">graphene (0.2460 nm)</option>
+          <option value="0.2504">hBN (0.2504 nm)</option>
+          <option value="custom">custom</option>
+        </select>
+        <input id="aCustom" type="number" step="any" min="0" placeholder="nm" style="width:6em" hidden aria-label="Custom lattice constant in nm">
+      </div>
+      <hr>
+      <div class="row zoom">
+        <span class="lbl">Zoom</span>
+        <button data-z="1" class="on">1x</button><button data-z="2">2x</button><button data-z="3">3x</button>
+        <button id="clear" style="margin-left:auto">Clear line</button>
+      </div>
+      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. Drag an end to adjust. Arrow keys change image, + and - change periods.</p>
+      <div class="row">
+        <button class="primary" id="export">Download CSV</button>
+        <button id="exportJson" title="Lines and settings, to reload later">Save session</button>
+        <button id="importJson" title="Reload a saved session">Load session</button>
+        <input id="sessFile" type="file" accept=".json" hidden>
+      </div>
+      <span class="status" id="status"></span>
+    </aside>
+  </div>
+
+  <div class="tblwrap"><table>
+    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>L (nm)</th><th>Twist (deg)</th><th>Periods</th><th>Line (nm)</th><th>Status</th><th>Note</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+
+  <footer>Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const IM = [];          // {name, url, w, h, img, scale, trueTwist}
+let cur = 0, zoom = 1, W = 600;
+const KEY = "moire-line-ruler/v1";
+let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "" };
+try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+function aNm() { const v = store.a === "custom" ? parseFloat(store.aCustom) : parseFloat(store.a); return v > 0 ? v : NaN; }
+function twist(L) { const a = aNm(); return 2 * Math.asin(Math.min(a / (2 * L), 1)) * 180 / Math.PI; }
+function line(im) { return store.lines[im.name] || (store.lines[im.name] = { n: 1, skip: false, note: "" }); }
+function scaleOf(im) { const s = store.scales[im.name] ?? im.scale; return s > 0 ? s : null; }
+function calc(im) {
+  const s = store.lines[im.name], k = scaleOf(im);
+  if (!s || s.x0 == null || !k) return null;
+  const len = Math.hypot(s.x1 - s.x0, s.y1 - s.y0) * k, L = len / (s.n || 1);
+  return { len, L, tw: twist(L) };
+}
+
+// ---------- loading ----------
+function parseScales(text) {
+  const out = {}; const lines = text.trim().split(/\r?\n/); if (!lines.length) return out;
+  const head = lines[0].split(",").map(s => s.trim().toLowerCase());
+  const fi = head.indexOf("filename"), si = head.indexOf("nm_per_px"), ti = head.indexOf("true_twist_deg");
+  if (fi < 0 || si < 0) { status("scales.csv needs the columns filename,nm_per_px", true); return out; }
+  lines.slice(1).forEach(l => { const c = l.split(","); if (c[fi]) out[c[fi].trim()] = { s: parseFloat(c[si]), t: ti >= 0 ? parseFloat(c[ti]) : NaN }; });
+  return out;
+}
+let pendingScales = {};
+function applyScales(map) {
+  Object.assign(pendingScales, map);
+  IM.forEach(im => { const m = pendingScales[im.name]; if (m) { if (m.s > 0 && store.scales[im.name] == null) im.scale = m.s; if (m.t > 0) im.trueTwist = m.t; } });
+}
+function addImage(name, url) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => { if (!IM.find(v => v.name === name)) IM.push({ name, url, w: img.naturalWidth, h: img.naturalHeight, img, scale: null, trueTwist: NaN }); res(); };
+    img.onerror = () => { status(`could not read ${name} (browsers cannot show TIFF or dm3: convert with tools/prepare_images.py)`, true); res(); };
+    img.src = url;
+  });
+}
+async function openFiles(list) {
+  const files = [...list]; let scaleText = null;
+  for (const f of files) {
+    if (/\.csv$/i.test(f.name)) scaleText = await f.text();
+    else if (f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name)) await addImage(f.name, URL.createObjectURL(f));
+    else status(`skipped ${f.name}: not a browser image`, true);
+  }
+  IM.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (scaleText) applyScales(parseScales(scaleText)); else applyScales({});
+  if (IM.length) { $("drop").hidden = true; cv.hidden = false; go(cur < IM.length ? cur : 0); }
+}
+$("open").onclick = () => $("files").click();
+$("files").onchange = e => { openFiles(e.target.files); e.target.value = ""; };
+const stage = $("stage");
+["dragenter", "dragover"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+stage.addEventListener("drop", e => openFiles(e.dataTransfer.files));
+$("examples").onclick = async () => {
+  try {
+    const man = await (await fetch("examples/manifest.json")).json();
+    for (const m of man) await addImage(m.file, "examples/" + m.file);
+    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg }])));
+    IM.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    $("drop").hidden = true; cv.hidden = false; go(0);
+  } catch (e) { status("examples load when the page is served (GitHub Pages or python -m http.server); from a local file, open examples/ with Open images", true); }
+};
+
+// ---------- drawing ----------
+function size() {
+  const im = IM[cur]; const base = Math.min(stage.clientWidth - 2, Math.max(320, window.innerHeight * 0.82));
+  const ar = im ? im.h / im.w : 1;
+  const wpx = Math.round(base * zoom * (ar > 1 ? 1 / ar : 1)), hpx = Math.round(wpx * ar);
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = wpx + "px"; cv.style.height = hpx + "px";
+  cv.width = Math.round(wpx * dpr); cv.height = Math.round(hpx * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return wpx;
+}
+function toC(v) { return v * W / IM[cur].w; }       // image px -> canvas px
+function toI(v) { return v * IM[cur].w / W; }       // canvas px -> image px
+function draw() {
+  const im = IM[cur]; if (!im) return; const s = line(im), H = W * im.h / im.w;
+  ctx.clearRect(0, 0, W, H); ctx.imageSmoothingQuality = "high"; ctx.drawImage(im.img, 0, 0, W, H);
+  const k = scaleOf(im);
+  if (k) {
+    const fov = im.w * k, sb = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].find(v => v >= fov / 8) || 1000, sbw = toC(sb / k);
+    ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(10, H - 36, sbw + 12, 26);
+    ctx.fillStyle = "#fff"; ctx.fillRect(16, H - 18, sbw, 5);
+    ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--mono"); ctx.fillText(sb + " nm", 16, H - 22);
+  }
+  if (s.x0 == null) return;
+  const x0 = toC(s.x0), y0 = toC(s.y0), x1 = toC(s.x1), y1 = toC(s.y1), col = s.skip ? "#e07a6a" : "#ffd23f", n = s.n || 1;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
+    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
+  }
+}
+let drag = null;
+function pt(e) { const r = cv.getBoundingClientRect(); return { x: toI(e.clientX - r.left), y: toI(e.clientY - r.top) }; }
+cv.addEventListener("pointerdown", e => {
+  const s = line(IM[cur]), p = pt(e), tol = toI(14); cv.setPointerCapture(e.pointerId);
+  if (s.x0 != null && Math.hypot(p.x - s.x0, p.y - s.y0) < tol) drag = "a";
+  else if (s.x0 != null && Math.hypot(p.x - s.x1, p.y - s.y1) < tol) drag = "b";
+  else { s.x0 = s.x1 = p.x; s.y0 = s.y1 = p.y; drag = "b"; }
+  draw();
+});
+cv.addEventListener("pointermove", e => {
+  if (!drag) return; const s = line(IM[cur]), p = pt(e);
+  if (drag === "a") { s.x0 = p.x; s.y0 = p.y; } else { s.x1 = p.x; s.y1 = p.y; }
+  draw(); panel(false);
+});
+cv.addEventListener("pointerup", () => {
+  if (!drag) return; drag = null; const s = line(IM[cur]);
+  if (Math.hypot(s.x1 - s.x0, s.y1 - s.y0) < toI(6)) s.x0 = s.y0 = s.x1 = s.y1 = null;
+  persist(); panel(); draw();
+});
+
+// ---------- panel ----------
+function status(t, bad) { const el = $("status"); el.textContent = t; el.className = "status" + (bad ? " warn" : ""); }
+function panel(full = true) {
+  const im = IM[cur];
+  $("count").textContent = `${IM.length ? cur + 1 : 0} / ${IM.length}`;
+  if (!im) return;
+  const s = line(im), c = calc(im), k = scaleOf(im);
+  $("title").textContent = im.name;
+  $("meta").textContent = `${im.w} x ${im.h} px` + (k ? `  ·  ${(im.w * k).toFixed(1)} x ${(im.h * k).toFixed(1)} nm` : "  ·  set the pixel size");
+  $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : c ? `${c.L.toFixed(2)} <small>nm</small>` : "<small>draw a line</small>";
+  $("rTw").textContent = c && isFinite(c.tw) ? c.tw.toFixed(2) + " deg" : "-";
+  $("rLine").textContent = c ? `${c.len.toFixed(1)} nm over ${s.n}` : "-";
+  const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
+  if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (synthetic ground truth)`;
+  if (document.activeElement !== $("nPer")) $("nPer").value = s.n || 1;
+  $("skip").checked = !!s.skip; $("skipBox").classList.toggle("on", !!s.skip);
+  if (document.activeElement !== $("note")) $("note").value = s.note || "";
+  if (document.activeElement !== $("scale")) $("scale").value = k ?? "";
+  $("scaleInfo").textContent = store.scales[im.name] != null ? "set by hand" : im.scale ? "from scales.csv" : "";
+  if (full) table();
+}
+function table() {
+  const tb = $("tb"); tb.textContent = "";
+  IM.forEach((im, i) => {
+    const s = store.lines[im.name] || {}, c = calc(im), k = scaleOf(im), tr = document.createElement("tr");
+    if (i === cur) tr.className = "cur";
+    [i + 1, im.name, k ? k.toPrecision(4) : "", k ? (im.w * k).toFixed(1) : "", c ? c.L.toFixed(2) : "", c && isFinite(c.tw) ? c.tw.toFixed(2) : "",
+     c ? s.n : "", c ? c.len.toFixed(1) : ""].forEach((v, j) => { const td = document.createElement("td"); td.textContent = v; if (j !== 1) td.className = "n"; tr.appendChild(td); });
+    const td = document.createElement("td"), ch = document.createElement("span");
+    ch.className = "chip " + (s.skip ? "sk" : c ? "ok" : ""); ch.textContent = s.skip ? "don't use" : c ? "measured" : k ? "to do" : "no scale";
+    td.appendChild(ch); tr.appendChild(td);
+    const tn = document.createElement("td"); tn.textContent = s.note || ""; tr.appendChild(tn);
+    tr.onclick = () => go(i); tb.appendChild(tr);
+  });
+}
+function go(i) { if (!IM.length) return; cur = (i + IM.length) % IM.length; W = size(); panel(); draw(); }
+function setN(n) { const s = line(IM[cur]); s.n = Math.max(1, Math.min(99, Math.round(n) || 1)); persist(); panel(); draw(); }
+$("nPer").addEventListener("change", e => setN(+e.target.value));
+$("nUp").onclick = () => IM[cur] && setN((line(IM[cur]).n || 1) + 1);
+$("nDown").onclick = () => IM[cur] && setN((line(IM[cur]).n || 1) - 1);
+$("skip").addEventListener("change", e => { if (!IM[cur]) return; line(IM[cur]).skip = e.target.checked; persist(); panel(); draw(); });
+$("note").addEventListener("input", e => { if (!IM[cur]) return; line(IM[cur]).note = e.target.value; persist(); table(); });
+$("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]); s.x0 = s.y0 = s.x1 = s.y1 = null; persist(); panel(); draw(); };
+$("scale").addEventListener("change", e => { if (!IM[cur]) return; const v = parseFloat(e.target.value);
+  if (v > 0) store.scales[IM[cur].name] = v; else delete store.scales[IM[cur].name]; persist(); panel(); draw(); });
+$("scaleAll").onclick = () => { const v = parseFloat($("scale").value); if (!(v > 0)) { status("enter a pixel size first", true); return; }
+  IM.forEach(im => store.scales[im.name] = v); persist(); panel(); draw(); status(`pixel size ${v} nm applied to ${IM.length} images`); };
+$("mat").value = [...$("mat").options].some(o => o.value === store.a) ? store.a : "custom";
+$("aCustom").hidden = $("mat").value !== "custom"; $("aCustom").value = store.aCustom || "";
+$("mat").addEventListener("change", e => { store.a = e.target.value; $("aCustom").hidden = store.a !== "custom"; persist(); panel(); });
+$("aCustom").addEventListener("input", e => { store.aCustom = e.target.value; persist(); panel(); });
+document.querySelectorAll(".zoom [data-z]").forEach(b => b.onclick = () => {
+  zoom = +b.dataset.z; document.querySelectorAll(".zoom [data-z]").forEach(x => x.classList.toggle("on", x === b)); if (IM.length) { W = size(); draw(); } });
+$("prev").onclick = () => go(cur - 1); $("next").onclick = () => go(cur + 1);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" && e.target.type !== "checkbox" || e.target.tagName === "SELECT") return;
+  if (e.key === "ArrowRight") go(cur + 1); else if (e.key === "ArrowLeft") go(cur - 1);
+  else if ((e.key === "+" || e.key === "=") && IM[cur]) setN((line(IM[cur]).n || 1) + 1);
+  else if (e.key === "-" && IM[cur]) setN((line(IM[cur]).n || 1) - 1);
+});
+window.addEventListener("resize", () => { if (IM.length) { W = size(); draw(); } });
+
+// ---------- export ----------
+function download(name, text, type) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+$("export").onclick = () => {
+  if (!IM.length) { status("nothing to export yet", true); return; }
+  const q = v => { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const head = ["n", "image", "nm_per_px", "use", "line_nm", "periods", "L_nm", "twist_deg", "lattice_a_nm", "x0_px", "y0_px", "x1_px", "y1_px", "note"];
+  const rows = IM.map((im, i) => { const s = store.lines[im.name] || {}, c = calc(im);
+    return [i + 1, im.name, scaleOf(im) ?? "", s.skip ? "no" : c ? "yes" : "", c ? c.len.toFixed(3) : "", c ? s.n : "", c ? c.L.toFixed(3) : "",
+      c && isFinite(c.tw) ? c.tw.toFixed(3) : "", aNm(), ...["x0", "y0", "x1", "y1"].map(k => s[k] != null ? s[k].toFixed(1) : ""), s.note || ""].map(q).join(","); });
+  download("moire_lines.csv", head.join(",") + "\n" + rows.join("\n") + "\n", "text/csv");
+  status("CSV downloaded");
+};
+$("exportJson").onclick = () => download("moire_ruler_session.json", JSON.stringify(store, null, 1), "application/json");
+$("importJson").onclick = () => $("sessFile").click();
+$("sessFile").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { const j = JSON.parse(await f.text()); Object.assign(store.lines, j.lines || {}); Object.assign(store.scales, j.scales || {});
+    if (j.a) store.a = j.a; if (j.aCustom) store.aCustom = j.aCustom; persist(); panel(); draw(); status("session loaded; open the same images to see the lines"); }
+  catch (err) { status("that file is not a saved session", true); } };
+if (location.hash === "#examples") $("examples").click();
+</script>
+</body>
+</html>
