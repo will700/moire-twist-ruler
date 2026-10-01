@@ -35,6 +35,11 @@ canvas{display:block;touch-action:none;cursor:crosshair}
 .lbl{font:500 .7rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .big{font:500 1.9rem var(--mono);font-variant-numeric:tabular-nums;line-height:1.1}
 .big small{font-size:.9rem;color:var(--muted)}
+.step{display:grid;gap:2px}
+.step+.step{margin-top:12px}
+.step .lbl b{color:var(--ink);font-weight:600}
+.formula{font:.78rem var(--mono);color:var(--muted)}
+.arrow{font:.78rem var(--mono);color:var(--muted);margin:6px 0 0}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .num input{width:5.2em;text-align:center;font-family:var(--mono)}
 .readout{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font:.85rem var(--mono);font-variant-numeric:tabular-nums}
@@ -89,10 +94,17 @@ footer a{color:var(--muted)}
     </div>
     <aside class="side">
       <div>
-        <div class="lbl">Domain length L (mean of lines)</div>
-        <div class="big" id="bigL">-</div>
-        <div class="readout" style="margin-top:8px">
-          <span>twist</span><span id="rTw">-</span>
+        <div class="step">
+          <div class="lbl"><b>1. Measured:</b> domain length L</div>
+          <div class="big" id="bigL">-</div>
+          <div class="formula" id="lNote">mean of the lines you draw</div>
+        </div>
+        <div class="step">
+          <div class="lbl"><b>2. Calculated:</b> twist angle <span style="text-transform:none">&theta;</span></div>
+          <div class="big" id="bigT">-</div>
+          <div class="formula" id="formula">&theta; = 2 asin(a / 2L)</div>
+        </div>
+        <div class="readout" style="margin-top:12px">
           <span>lines</span><span id="rLines">-</span>
           <span>selected</span><span id="rLine">-</span>
           <span id="rTrueK" hidden>reference</span><span id="rTrue" hidden></span>
@@ -135,7 +147,7 @@ footer a{color:var(--muted)}
         <button id="del" style="margin-left:auto" title="Delete the selected line (Delete key)">Delete line</button>
         <button id="clear" title="Remove every line on this image">Clear all</button>
       </div>
-      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
+      <p class="help">Each line you draw <b>measures a moire domain length L</b>; the <b>twist angle is calculated</b> from L. <b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
         <button class="primary" id="export">Download CSV</button>
         <button id="exportJson" title="Lines and settings, to reload later">Save session</button>
@@ -148,11 +160,11 @@ footer a{color:var(--muted)}
   </div>
 
   <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>L (nm)</th><th>Twist (deg)</th><th>Lines</th><th>L range (nm)</th><th>Status</th><th>Note</th></tr></thead>
+    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>Domain L (nm), measured</th><th>Twist (deg), from L</th><th>Lines</th><th>L range (nm)</th><th>Status</th><th>Note</th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
 
-  <footer>Each line gives L = length / periods; each line is a separate measurement; an image's L is the mean of its lines (with the standard deviation). Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
+  <footer>Each line measures a domain length L = length / periods; each line is a separate measurement; an image's L is the mean of its lines (with the standard deviation). The twist is then calculated from that AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
 </div>
 
 <script>
@@ -314,10 +326,11 @@ function draw() {
     ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--mono"); ctx.fillText(sb + " nm", 16, H - 22);
   }
   const mono = getComputedStyle(document.body).getPropertyValue("--mono");
-  s.segs.forEach((g, i) => { if (i !== s.act) drawSeg(g, i, false, s.skip, mono); });
-  if (sel(s)) drawSeg(sel(s), s.act, true, s.skip, mono);
+  const lab = g => k ? `L ${segCalc(g, k).L.toFixed(2)} nm` : "";
+  s.segs.forEach((g, i) => { if (i !== s.act) drawSeg(g, i, false, s.skip, mono, lab(g)); });
+  if (sel(s)) drawSeg(sel(s), s.act, true, s.skip, mono, lab(sel(s)));
 }
-function drawSeg(g, i, on, skip, mono) {
+function drawSeg(g, i, on, skip, mono, lab) {
   const x0 = toC(g.x0), y0 = toC(g.y0), x1 = toC(g.x1), y1 = toC(g.y1), n = g.n || 1;
   const col = skip ? "#e07a6a" : on ? "#ffd23f" : "#4fc3f7", r = on ? 7 : 5;
   ctx.lineCap = "round";
@@ -332,6 +345,15 @@ function drawSeg(g, i, on, skip, mono) {
   const lx = x0 + (x0 <= x1 ? -14 : 8), ly = y0 - 10;
   ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(lx - 3, ly - 11, ctx.measureText(t).width + 6, 15);
   ctx.fillStyle = col; ctx.fillText(t, lx, ly);
+  // the measured domain length, beside the middle of the line
+  const len = Math.hypot(x1 - x0, y1 - y0);
+  if (lab && len > 46) {
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
+    ctx.font = (on ? "600 " : "500 ") + "12px " + mono; const tw = ctx.measureText(lab).width;
+    const sx = ny > 0 ? -1 : 1, cx = mx + nx * 16 * sx, cy = my + ny * 16 * sx;
+    ctx.fillStyle = "rgba(0,0,0,.78)"; ctx.fillRect(cx - tw / 2 - 4, cy - 10, tw + 8, 16);
+    ctx.fillStyle = col; ctx.fillText(lab, cx - tw / 2, cy + 2);
+  }
 }
 let drag = null;      // {i, end: "a"|"b"} while moving an end; {pick, p} while deciding select vs new line
 function pt(e) { const r = cv.getBoundingClientRect(); return { x: toI(e.clientX - r.left), y: toI(e.clientY - r.top) }; }
@@ -383,13 +405,16 @@ function panel(full = true) {
   $("title").textContent = im.name;
   $("meta").textContent = `${im.w} x ${im.h} px` + (k ? `  ·  ${(im.w * k).toFixed(1)} x ${(im.h * k).toFixed(1)} nm` : "  ·  set the pixel size");
   $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : c ? `${c.L.toFixed(2)} <small>nm</small>` : "<small>draw a line</small>";
-  $("rTw").textContent = c && isFinite(c.tw) ? c.tw.toFixed(2) + " deg" : "-";
+  $("bigT").innerHTML = c && isFinite(c.tw) ? `${c.tw.toFixed(2)} <small>deg</small>` : "-";
+  $("lNote").textContent = c ? (c.per.length > 1 ? `mean of ${c.per.length} lines` : "from 1 line") : "mean of the lines you draw";
+  $("formula").textContent = c && isFinite(c.tw) ? `θ = 2 asin(a / 2L), a = ${aNm().toFixed(4)} nm` : `θ = 2 asin(a / 2L), a = ${isFinite(aNm()) ? aNm().toFixed(4) + " nm" : "lattice constant"}`;
   $("rLines").textContent = c ? `${c.per.length}` + (c.per.length > 1 ? `, sd ${c.sd.toFixed(2)} nm, range ${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : "") : "-";
   const g = sel(s), gc = g && k ? segCalc(g, k) : null;
   $("rLine").textContent = gc ? `#${s.act + 1}: L ${gc.L.toFixed(2)} nm, ${gc.tw.toFixed(2)} deg, ${gc.len.toFixed(1)} nm / ${gc.n}, at ${gc.ang.toFixed(0)} deg` : "-";
   const ll = $("lineList"); ll.textContent = "";
   if (k) s.segs.forEach((h, i) => { const hc = segCalc(h, k), b = document.createElement("button"); b.type = "button";
-    b.className = i === s.act ? "on" : ""; b.innerHTML = `<span>#${i + 1}</span><span>${hc.L.toFixed(2)} nm x ${hc.n}</span><span>${hc.ang.toFixed(0)}&deg;</span>`;
+    b.className = i === s.act ? "on" : ""; b.innerHTML = `<span>#${i + 1}</span><span>L ${hc.L.toFixed(2)} nm` + (hc.n > 1 ? ` (/${hc.n})` : "") + `</span><span>&theta; ${isFinite(hc.tw) ? hc.tw.toFixed(2) : "-"}&deg;</span>`;
+    b.title = `line ${i + 1}: ${hc.len.toFixed(1)} nm over ${hc.n} period(s), direction ${hc.ang.toFixed(0)} deg`;
     b.onclick = () => { s.act = i; persist(); panel(); draw(); }; ll.appendChild(b); });
   const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
   if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (${im.refLabel})`;
