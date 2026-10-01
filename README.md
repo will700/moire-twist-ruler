@@ -33,17 +33,40 @@ published dataset (CC BY 4.0, credited below) and three are synthetic, generated
 script in `tools/`. No private or unpublished data is included. See
 [examples/README.md](examples/README.md) for where each image comes from.
 
+## What you are looking at
+
+![the regions of a reconstructed twisted bilayer: parallel (near 0 deg) gives triangles of MX and XM stacking meeting at MMXX (AA) nodes; antiparallel (near 60 deg) gives hexagons of XMMX (2H) stacking with XX nodes and MM sites at alternate corners](docs/img/moire_regions.svg)
+
+A small twist does not leave the two layers rigid. They relax towards the low-energy
+stackings, so the moire pattern becomes a network of domains separated by thin walls. The
+names below are the ones Van Winkle et al. 2023 use for twisted MoS2 (M = metal,
+X = chalcogen, each name says which atoms sit on top of each other):
+
+- **Parallel, near 0 deg (3R-like).** MX and XM (often written AB and BA) are the two
+  low-energy stackings, mirror versions of each other, and they grow into **triangular
+  domains**. They meet along **domain walls** of saddle-point (SP) stacking. Three walls
+  cross at an **MMXX node** (often written AA): metal over metal and chalcogen over
+  chalcogen, the highest energy, squeezed to a point.
+- **Antiparallel, near 60 deg (2H-like).** XMMX, the 2H stacking, is the low-energy one and
+  grows into **hexagonal domains**. XX (chalcogen over chalcogen, highest energy) shrinks to
+  points at alternate hexagon corners: these are the **nodes**. MM (metal over metal) sits at
+  the other corners; it is only a little above XMMX in energy, so it stays as small regions
+  at larger twist and shrinks as the twist falls.
+
+The nodes do not move when the layers relax, so in both cases they mark the moire lattice,
+and the period L is measured between them.
+
 ## How to measure a domain
 
-![how to read the moire period: node to node, click every node, span several periods, not domain centres or triangle heights, unequal periods mean heterostrain, hexagon centres for AP stacking](docs/img/how_to_measure.svg)
+![how to read the moire period L: node to node; click every node; lines over several periods; not domain centres or triangle heights; unequal periods mean heterostrain; hexagon centre to centre near 60 deg](docs/img/how_to_measure.svg)
 
-The moire period L is the distance from one **AA node** (where three domain walls meet)
-to the next node along a wall (panel 1). That is the quantity in the twist formula, and
-it is the right one for three reasons:
+The moire period L is the distance from one **MMXX (AA) node** (where three domain walls
+meet) to the next node along a wall (Definition). That is the quantity in the twist
+formula, and it is the right one for three reasons:
 
-- **The nodes are the moire lattice.** Each AA node is a place where the two layers sit
-  atom on atom, so going from one node to the next is exactly one period. Domain centres
-  and wall midpoints are features inside a cell, not lattice points.
+- **The nodes are the moire lattice.** At a node the two layers sit atom on atom, so going
+  from one node to the next is exactly one period. Domain centres and wall midpoints are
+  features inside a cell, not lattice points.
 - **Reconstruction does not move the nodes.** Relaxation grows the triangles and sharpens
   the walls, but the node lattice keeps the period a / (2 sin(theta/2)).
 - **Nodes are sharp.** Three walls meet at a point, so a node can be placed to a pixel or
@@ -51,28 +74,29 @@ it is the right one for three reasons:
 
 The two ways to measure in the ruler:
 
-- **Click nodes (best, panel 2).** Click every node you can see. Neighbouring nodes are
-  joined into triangular moire cells, so there is nothing to count, and each cell gives its
-  own three sides, twist and heterostrain. Real networks are rarely uniform (heterostrain
-  stretches the cells, and the twist drifts across the field), so the cells are measured
-  one by one rather than forced onto a single lattice.
-- **Lines (panel 3).** Drag from a node to another node several periods along one wall,
-  and set the periods to *nodes on the line minus one*. Do this along all three wall
-  directions. Counting triangles instead of nodes gives about two per period and
-  doubles theta.
+- **Click nodes (best).** Click every node you can see. Neighbouring nodes are joined into
+  triangular moire cells, so there is nothing to count, and each cell gives its own three
+  sides, twist and heterostrain. Real networks are rarely uniform (heterostrain stretches
+  the cells, and the twist drifts across the field), so the cells are measured one by one
+  rather than forced onto a single lattice.
+- **Lines (in practice).** Drag from a node to another node several periods along one
+  wall, and set the periods to *nodes on the line minus one*. Do this along all three wall
+  directions. Counting triangles instead of nodes gives about two per period and doubles
+  theta.
 
-Common mistakes (panel 4): domain centre to the neighbouring centre is L / sqrt(3), which
-reads theta 1.73x too high (on HAADF the AB and BA domains look the same, so the nearest
-bright blobs are this pair); the triangle height is 0.87 L (theta 1.15x too high); a
-second-order fringe is L / 2 (theta 2x too high).
+Common mistakes: domain centre to the neighbouring centre is L / sqrt(3), which reads theta
+1.73x too high (the MX and XM domains can look alike, so the nearest bright blobs are this
+pair); the triangle height is 0.87 L (theta 1.15x too high); a second-order fringe is L / 2
+(theta 2x too high).
 
-If the three periods differ by more than a few percent (panel 5) the bilayer carries
-heterostrain. Then the pure-twist formula on the mean period reads the twist wrong (a
-synthetic WS2 cell at 1.00 deg with 0.5 % strain has sides 15.3, 20.2 and 20.6 nm, and
-the formula on their mean gives 0.97 deg); Click nodes mode solves twist and
-heterostrain together. Near 60 deg
-(antiparallel stacking) one stacking grows into hexagons (panel 6): L is the hexagon
-centre-to-centre spacing, not the hexagon edge (L / sqrt(3)).
+If the three periods differ by more than a few percent the bilayer carries heterostrain.
+Then the pure-twist formula on the mean period reads the twist wrong (a synthetic WS2 cell
+at 1.00 deg with 0.5 % strain has sides 15.3, 20.2 and 20.6 nm, and the formula on their
+mean gives 0.97 deg); Click nodes mode solves twist and heterostrain together. Near 60 deg
+(antiparallel) the XMMX domains are hexagons with the nodes at their corners: L is the
+hexagon centre-to-centre spacing, not the hexagon edge (L / sqrt(3)).
+
+The diagrams are drawn by `tools/make_measure_diagram.py`.
 
 ## How to use it
 
