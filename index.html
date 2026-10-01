@@ -121,6 +121,13 @@ footer a{color:var(--muted)}
           <button type="button" id="mNodes" aria-pressed="false">Click nodes</button>
         </span>
       </div>
+      <div class="row">
+        <span class="lbl" style="flex-basis:100%">Colour map</span>
+        <select id="cmap" aria-label="Colour map" title="Display only: the image file and the labels are unchanged">
+          <option value="grey">grey</option>
+          <option value="inferno">inferno (matplotlib)</option>
+        </select>
+      </div>
       <div id="nodeCtl" hidden>
         <div class="readout">
           <span>nodes</span><span id="fN">-</span>
@@ -207,7 +214,7 @@ const cv = $("cv"), ctx = cv.getContext("2d");
 const IM = [];          // {name, url, w, h, img, scale, trueTwist}
 let cur = 0, zoom = 1, W = 600;
 const KEY = "moire-twist-ruler/v1";
-let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "", mode: "lines" };
+let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "", mode: "lines", cmap: "grey" };
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 // optional autosave to a local server: index.html?save=<url> POSTs the whole session after every
 // change (GET on the same url returns the last saved session, used to restore an empty browser)
@@ -441,9 +448,22 @@ function size() {
 }
 function toC(v) { return v * W / IM[cur].w; }       // image px -> canvas px
 function toI(v) { return v * IM[cur].w / W; }       // canvas px -> image px
+// display colour map: the grey image is mapped through a 256-entry table once per image and cached
+const CMAPS = { inferno: "00000401000501010601010802010a02020c02020e03021004031204031405041706041907051b08051d09061f0a07220b07240c08260d08290e092b10092d110a30120a32140b34150b37160b39180c3c190c3e1b0c411c0c431e0c451f0c48210c4a230c4c240c4f260c51280b53290b552b0b572d0b592f0a5b310a5c320a5e340a5f3609613809623909633b09643d09653e0966400a67420a68440a68450a69470b6a490b6a4a0c6b4c0c6b4d0d6c4f0d6c510e6c520e6d540f6d550f6d57106e59106e5a116e5c126e5d126e5f136e61136e62146e64156e65156e67166e69166e6a176e6c186e6d186e6f196e71196e721a6e741a6e751b6e771c6d781c6d7a1d6d7c1d6d7d1e6d7f1e6c801f6c82206c84206b85216b87216b88226a8a226a8c23698d23698f24699025689225689326679526679727669827669a28659b29649d29649f2a63a02a63a22b62a32c61a52c60a62d60a82e5fa92e5eab2f5ead305dae305cb0315bb1325ab3325ab43359b63458b73557b93556ba3655bc3754bd3853bf3952c03a51c13a50c33b4fc43c4ec63d4dc73e4cc83f4bca404acb4149cc4248ce4347cf4446d04545d24644d34743d44842d54a41d74b3fd84c3ed94d3dda4e3cdb503bdd513ade5238df5337e05536e15635e25734e35933e45a31e55c30e65d2fe75e2ee8602de9612bea632aeb6429eb6628ec6726ed6925ee6a24ef6c23ef6e21f06f20f1711ff1731df2741cf3761bf37819f47918f57b17f57d15f67e14f68013f78212f78410f8850ff8870ef8890cf98b0bf98c0af98e09fa9008fa9207fa9407fb9606fb9706fb9906fb9b06fb9d07fc9f07fca108fca309fca50afca60cfca80dfcaa0ffcac11fcae12fcb014fcb216fcb418fbb61afbb81dfbba1ffbbc21fbbe23fac026fac228fac42afac62df9c72ff9c932f9cb35f8cd37f8cf3af7d13df7d340f6d543f6d746f5d949f5db4cf4dd4ff4df53f4e156f3e35af3e55df2e661f2e865f2ea69f1ec6df1ed71f1ef75f1f179f2f27df2f482f3f586f3f68af4f88ef5f992f6fa96f8fb9af9fc9dfafda1fcffa4" };
+function shown(im) {
+  const name = store.cmap; if (!CMAPS[name]) return im.img;
+  if (im.cimg && im.cimgName === name) return im.cimg;
+  try {
+    const hex = CMAPS[name], c = document.createElement("canvas"); c.width = im.w; c.height = im.h;
+    const g = c.getContext("2d"); g.drawImage(im.img, 0, 0); const d = g.getImageData(0, 0, im.w, im.h), p = d.data;
+    const lut = new Uint8Array(768); for (let i = 0; i < 768; i++) lut[i] = parseInt(hex.substr(2 * i, 2), 16);
+    for (let i = 0; i < p.length; i += 4) { const v = Math.round((p[i] + p[i + 1] + p[i + 2]) / 3) * 3; p[i] = lut[v]; p[i + 1] = lut[v + 1]; p[i + 2] = lut[v + 2]; }
+    g.putImageData(d, 0, 0); im.cimg = c; im.cimgName = name; return c;
+  } catch (e) { return im.img; }   // e.g. a cross-origin image: show it grey
+}
 function draw() {
   const im = IM[cur]; if (!im) return; const s = line(im), H = W * im.h / im.w;
-  ctx.clearRect(0, 0, W, H); ctx.imageSmoothingQuality = "high"; ctx.drawImage(im.img, 0, 0, W, H);
+  ctx.clearRect(0, 0, W, H); ctx.imageSmoothingQuality = "high"; ctx.drawImage(shown(im), 0, 0, W, H);
   const k = scaleOf(im);
   if (k) {
     const fov = im.w * k, sb = [0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].find(v => v >= fov / 8) || 1000, sbw = toC(sb / k);
@@ -641,6 +661,8 @@ $("scaleAll").onclick = () => { const v = parseFloat($("scale").value); if (!(v 
 $("mat").value = [...$("mat").options].some(o => o.value === store.a) ? store.a : "custom";
 $("aCustom").hidden = $("mat").value !== "custom"; $("aCustom").value = store.aCustom || "";
 $("mat").addEventListener("change", e => { store.a = e.target.value; $("aCustom").hidden = store.a !== "custom"; persist(); panel(); });
+$("cmap").value = CMAPS[store.cmap] ? store.cmap : "grey";
+$("cmap").addEventListener("change", e => { store.cmap = e.target.value; e.target.blur(); persist(); draw(); });
 $("aCustom").addEventListener("input", e => { store.aCustom = e.target.value; persist(); panel(); });
 document.querySelectorAll(".zoom [data-z]").forEach(b => b.onclick = () => {
   zoom = +b.dataset.z; document.querySelectorAll(".zoom [data-z]").forEach(x => x.classList.toggle("on", x === b)); if (IM.length) { W = size(); draw(); } });
