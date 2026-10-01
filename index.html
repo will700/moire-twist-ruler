@@ -89,7 +89,7 @@ footer a{color:var(--muted)}
     </div>
     <aside class="side">
       <div>
-        <div class="lbl">Domain length L (all lines)</div>
+        <div class="lbl">Domain length L (mean of lines)</div>
         <div class="big" id="bigL">-</div>
         <div class="readout" style="margin-top:8px">
           <span>twist</span><span id="rTw">-</span>
@@ -135,7 +135,7 @@ footer a{color:var(--muted)}
         <button id="del" style="margin-left:auto" title="Delete the selected line (Delete key)">Delete line</button>
         <button id="clear" title="Remove every line on this image">Clear all</button>
       </div>
-      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line (as many as you like, e.g. one per row or per direction); the image's L pools them all (total length over total periods). Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
+      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
         <button class="primary" id="export">Download CSV</button>
         <button id="exportJson" title="Lines and settings, to reload later">Save session</button>
@@ -151,7 +151,7 @@ footer a{color:var(--muted)}
     <tbody id="tb"></tbody>
   </table></div>
 
-  <footer>Each line gives L = length / periods; an image's L is the total length of its lines over their total periods. Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
+  <footer>Each line gives L = length / periods; each line is a separate measurement; an image's L is the mean of its lines (with the standard deviation). Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
 </div>
 
 <script>
@@ -189,9 +189,11 @@ function calc(im) {
   if (!s || !k) return null; mig(s);
   if (!s.segs.length) return null;
   const per = s.segs.map(g => segCalc(g, k));
-  const len = per.reduce((t, c) => t + c.len, 0), nn = per.reduce((t, c) => t + c.n, 0), L = len / nn;
+  const len = per.reduce((t, c) => t + c.len, 0), nn = per.reduce((t, c) => t + c.n, 0);
   const Ls = per.map(c => c.L);
-  return { per, len, nn, L, tw: twist(L), Lmin: Math.min(...Ls), Lmax: Math.max(...Ls) };
+  const L = Ls.reduce((t, v) => t + v, 0) / Ls.length;
+  const sd = Ls.length > 1 ? Math.sqrt(Ls.reduce((t, v) => t + (v - L) ** 2, 0) / (Ls.length - 1)) : NaN;
+  return { per, len, nn, L, sd, tw: twist(L), Lmin: Math.min(...Ls), Lmax: Math.max(...Ls) };
 }
 
 // ---------- loading ----------
@@ -233,15 +235,27 @@ const stage = $("stage");
 ["dragenter", "dragover"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); $("drop").classList.add("over"); }));
 ["dragleave", "drop"].forEach(t => stage.addEventListener(t, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
 stage.addEventListener("drop", e => openFiles(e.dataTransfer.files));
+// load a list of images: [{file, nm_per_px, true_twist_deg?, ref_label?, source?}], paths relative to the manifest
+async function loadManifest(url) {
+  const man = await (await fetch(url)).json(), base = url.replace(/[^/]*$/, "");
+  const got = new Array(man.length);
+  for (let i = 0; i < man.length; i += 12) {
+    await Promise.all(man.slice(i, i + 12).map((m, j) => new Promise(res => {
+      const img = new Image(), nm = m.file.split("/").pop();
+      img.onload = () => { got[i + j] = { name: nm, url: base + m.file, w: img.naturalWidth, h: img.naturalHeight, img, scale: null, trueTwist: NaN }; res(); };
+      img.onerror = () => { status(`could not read ${m.file}`, true); res(); };
+      img.src = base + m.file;
+    })));
+    status(`loading ${Math.min(i + 12, man.length)} / ${man.length}`);
+  }
+  got.forEach(v => { if (v && !IM.find(x => x.name === v.name)) IM.push(v); });
+  applyScales(Object.fromEntries(man.map(m => [m.file.split("/").pop(), { s: m.nm_per_px, t: m.true_twist_deg, l: m.ref_label, src: m.source }])));
+  $("drop").hidden = true; cv.hidden = false; go(0); status(`${IM.length} images loaded`);
+}
 $("examples").onclick = async () => {
-  try {
-    const man = await (await fetch("examples/manifest.json")).json();
-    for (const m of man) await addImage(m.file, "examples/" + m.file);
-    applyScales(Object.fromEntries(man.map(m => [m.file, { s: m.nm_per_px, t: m.true_twist_deg, l: m.ref_label, src: m.source }])));
-    $("drop").hidden = true; cv.hidden = false; go(0);
-  } catch (e) { status("examples load when the page is served (GitHub Pages or python -m http.server); from a local file, open examples/ with Open images", true); }
+  try { await loadManifest("examples/manifest.json"); }
+  catch (e) { status("examples load when the page is served (GitHub Pages or python -m http.server); from a local file, open examples/ with Open images", true); }
 };
-
 // ---------- drawing ----------
 function size() {
   const im = IM[cur]; const base = Math.min(stage.clientWidth - 2, Math.max(320, window.innerHeight * 0.82));
@@ -292,7 +306,7 @@ function distSeg(p, g) {
   return Math.hypot(p.x - g.x0 - t * dx, p.y - g.y0 - t * dy);
 }
 function newSeg(s, p) {
-  const n = sel(s) ? sel(s).n || 1 : 1;
+  const n = 1;
   s.segs.push({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, n }); s.act = s.segs.length - 1;
   return { i: s.act, end: "b" };
 }
@@ -335,7 +349,7 @@ function panel(full = true) {
   $("meta").textContent = `${im.w} x ${im.h} px` + (k ? `  ·  ${(im.w * k).toFixed(1)} x ${(im.h * k).toFixed(1)} nm` : "  ·  set the pixel size");
   $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : c ? `${c.L.toFixed(2)} <small>nm</small>` : "<small>draw a line</small>";
   $("rTw").textContent = c && isFinite(c.tw) ? c.tw.toFixed(2) + " deg" : "-";
-  $("rLines").textContent = c ? `${c.per.length}, ${c.len.toFixed(1)} nm over ${c.nn} periods` + (c.per.length > 1 ? `, L ${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : "") : "-";
+  $("rLines").textContent = c ? `${c.per.length}` + (c.per.length > 1 ? `, sd ${c.sd.toFixed(2)} nm, range ${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : "") : "-";
   const g = sel(s), gc = g && k ? segCalc(g, k) : null;
   $("rLine").textContent = gc ? `#${s.act + 1}: L ${gc.L.toFixed(2)} nm, ${gc.tw.toFixed(2)} deg, ${gc.len.toFixed(1)} nm / ${gc.n}, at ${gc.ang.toFixed(0)} deg` : "-";
   const ll = $("lineList"); ll.textContent = "";
@@ -408,11 +422,11 @@ $("export").onclick = () => {
   if (!IM.length) { status("nothing to export yet", true); return; }
   const q = v => { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
   const head = ["n", "image", "nm_per_px", "use", "line", "line_nm", "periods", "L_nm", "twist_deg", "angle_deg",
-    "image_lines", "image_L_nm", "image_twist_deg", "image_L_min_nm", "image_L_max_nm", "lattice_a_nm", "x0_px", "y0_px", "x1_px", "y1_px", "note"];
+    "image_lines", "image_L_mean_nm", "image_L_sd_nm", "image_twist_deg", "image_L_min_nm", "image_L_max_nm", "lattice_a_nm", "x0_px", "y0_px", "x1_px", "y1_px", "note"];
   const rows = [];
   IM.forEach((im, i) => { const s = store.lines[im.name] ? mig(store.lines[im.name]) : { segs: [] }, c = calc(im), k = scaleOf(im);
     const use = s.skip ? "no" : c ? "yes" : "";
-    const img = c ? [c.per.length, c.L.toFixed(3), isFinite(c.tw) ? c.tw.toFixed(3) : "", c.Lmin.toFixed(3), c.Lmax.toFixed(3)] : ["", "", "", "", ""];
+    const img = c ? [c.per.length, c.L.toFixed(3), isFinite(c.sd) ? c.sd.toFixed(3) : "", isFinite(c.tw) ? c.tw.toFixed(3) : "", c.Lmin.toFixed(3), c.Lmax.toFixed(3)] : ["", "", "", "", "", ""];
     if (!c) { rows.push([i + 1, im.name, k ?? "", use, "", "", "", "", "", "", ...img, aNm(), "", "", "", "", s.note || ""].map(q).join(",")); return; }
     s.segs.forEach((g, j) => { const gc = c.per[j];
       rows.push([i + 1, im.name, k, use, j + 1, gc.len.toFixed(3), gc.n, gc.L.toFixed(3), isFinite(gc.tw) ? gc.tw.toFixed(3) : "", gc.ang.toFixed(1),
@@ -426,7 +440,9 @@ $("sessFile").onchange = async e => { const f = e.target.files[0]; e.target.valu
   try { const j = JSON.parse(await f.text()); Object.assign(store.lines, j.lines || {}); Object.values(store.lines).forEach(mig); Object.assign(store.scales, j.scales || {});
     if (j.a) store.a = j.a; if (j.aCustom) store.aCustom = j.aCustom; persist(); panel(); draw(); status("session loaded; open the same images to see the lines"); }
   catch (err) { status("that file is not a saved session", true); } };
-if (location.hash === "#examples") $("examples").click();
+const mq = new URLSearchParams(location.search).get("manifest");
+if (mq) loadManifest(mq).catch(() => status(`could not load ${mq} (serve the folder with python -m http.server)`, true));
+else if (location.hash === "#examples") $("examples").click();
 </script>
 </body>
 </html>

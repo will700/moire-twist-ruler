@@ -11,8 +11,9 @@ https://will700.github.io/moire-twist-ruler/#examples)
 ![the ruler: a line drawn across three domains of a twisted MoS2 bilayer, giving L = 20.5 nm and 0.88 deg](docs/img/screenshot.png)
 
 Draw a line from node to node, say how many domains it spans, and you get the domain
-length L and the twist. Draw more lines on the same image and they are pooled (total
-length over total periods). The example readings below, one line per image:
+length L and the twist. Draw as many lines as you like on one image: each is its own
+domain-length measurement, and the image gets their mean, spread and count. The example
+readings below, one line per image:
 
 | image | use | line (nm) | periods | L (nm) | twist (deg) | note |
 |---|---|---|---|---|---|---|
@@ -42,10 +43,14 @@ script in `tools/`. No private or unpublished data is included. See
    nodes.
    Drag again to add more lines on the same image (other rows, other directions); click a
    line to select it, Shift-drag always starts a new one, Delete removes the selected one.
-   The image's L is the total length of its lines over their total periods.
+   Every line is a separate domain length (new lines start at 1 period); the image's L is
+   their mean, with the standard deviation and range.
 5. Tick "Don't use this one" for any image you want to leave out.
 6. Download the CSV when you're done: one row per line (with its direction), plus the
-   pooled value and the range for its image.
+   mean, standard deviation and range for its image.
+
+To load a whole set at once, serve a folder with a `manifest.json` (a list of
+`{"file": "...", "nm_per_px": ...}`) and open `index.html?manifest=manifest.json`.
 
 Arrow keys move between images, and + / - change the number of periods. Your lines are
 remembered in the browser, so you can close the tab and come back.
