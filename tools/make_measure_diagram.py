@@ -70,15 +70,14 @@ b = network(O) + [arrow(c, node(O, 3, 2), GOOD, False), arrow(c, node(O, 2, 1), 
                   label(c[0] + 24, c[1] - 8, "L", GOOD), label(c[0] + 18, c[1] - 30, "L", GOOD, "start"), label(c[0] - 24, c[1] - 8, "L", GOOD)]
 out += panel(0, "1. L = node to next node", "AA node (wall junction) to its neighbour", b)
 
-# 2 click every node + fitted lattice
+# 2 click every node: the cells between them are measured one by one
 b = network(O, dots=False)
 for j in range(0, 5):
     for i in range(-3, 7):
         x, y = node(O, i, j)
         if 8 < x < PW - 8 and 8 < y < PH - 8:
-            b.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="7" fill="none" stroke="{GOOD}" stroke-width="1.3" stroke-dasharray="3 2"/>')
             b.append(f'<circle cx="{x + 1.2:.1f}" cy="{y - 0.8:.1f}" r="3.6" fill="#ffd23f" stroke="{INK}" stroke-width="0.8"/>')
-out += panel(1, "2. Best: click every node", "fit one lattice to all: L1, L2, L3, no counting", b)
+out += panel(1, "2. Best: click every node", "cells between nodes: local twist + strain", b)
 
 # 3 lines over several periods, three directions
 b = network(O) + [arrow(node(O, 0, 1), node(O, 4, 1), GOOD), label(node(O, 2, 1)[0], node(O, 2, 1)[1] - 9, "4L", GOOD),

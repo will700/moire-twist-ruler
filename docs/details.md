@@ -16,20 +16,32 @@ few percent.
 Measuring across several periods is more precise than one: the error in L shrinks as
 1/n.
 
-### Node lattice fit (Click nodes mode)
+### Cells, twist and heterostrain (Click nodes mode)
 
-The clicked nodes p_k are fitted with one lattice, p_k = o + i_k a1 + j_k a2. A first
-guess of a1 and a2 comes from the nearest-neighbour vectors between clicks, grouped into
-the three wall directions; each click then gets the nearest integer index (i_k, j_k), and
-o, a1, a2 follow by linear least squares (x and y separately, re-indexed four times). The
-three periods are L1 = |a1|, L2 = |a2|, L3 = |a2 - a1|; the reported L is their mean and
-the twist uses that mean. Errors come from the fit covariance with the click scatter
-(residual rms per coordinate, 2n - 6 degrees of freedom) as the noise, so they assume
-the clicks scatter randomly about a perfect lattice; slow twist variation across the
-field shows up as structured residuals and a larger rms, not as a larger error bar.
-Clicks more than 2.5x the rms off their fitted node are drawn red, and two clicks given
-the same index are reported (a double click, or a click on a non-node feature). The
-angle between a1 and a2 is 60 deg for pure twist.
+The clicked nodes are joined by a Delaunay triangulation. A triangle counts as a moire
+cell when its smallest angle is at least 25 deg, its largest at most 100 deg, and its
+area is 0.5 to 1.6 times the median; the rest are slivers at the edge of the clicked area
+or triangles across a missing node.
+
+Each cell's sorted sides L1 <= L2 <= L3 are matched exactly to a twisted homobilayer with
+uniaxial heterostrain. The top layer is the bottom layer transformed by
+T = R(theta) (I + S), with
+
+    S = eps * [[cos^2 psi - nu sin^2 psi, (1 + nu) cos psi sin psi],
+               [(1 + nu) cos psi sin psi,  sin^2 psi - nu cos^2 psi]]
+
+(strain eps along psi, Poisson contraction nu across it). The moire lattice is D^-1 B with
+D = I - T^-1 and B the atomic basis, so its cell sides follow from (theta, eps, psi); three
+sides fix the three unknowns, solved by damped Gauss-Newton from several starts. Only
+theta and |eps| are reported: psi is measured from the atomic lattice, which the moire
+image does not show. The image result solves the median cell (median of each side); the
+error is the standard deviation of the per-cell twists over the square root of the
+number of cells, and the 10-90 % range shows real twist variation across the field. nu is
+an assumed input (default 0.25). For a synthetic WS2 cell at 1.00 deg with 0.5 % strain
+(sides 15.3, 20.2, 20.6 nm) the solved twist is 0.99 to 1.00 deg for nu from 0 to 0.3,
+while the pure-twist formula on the mean side gives 0.97 deg. This is the approach of Kerelsky et al., Nature 572,
+95 (2019) and Kazmierczak et al., Nature Materials 20, 956 (2021). With equal sides it
+reduces to theta = 2 asin(a / 2L).
 
 ## Try it on the examples
 

@@ -51,9 +51,11 @@ it is the right one for three reasons:
 
 The two ways to measure in the ruler:
 
-- **Click nodes (best, panel 2).** Click every node you can see. A lattice is fitted to all
-  of them by least squares, so there is nothing to count, every node adds precision (the
-  error falls roughly as 1 / sqrt(number of nodes)), and you get all three periods at once.
+- **Click nodes (best, panel 2).** Click every node you can see. Neighbouring nodes are
+  joined into triangular moire cells, so there is nothing to count, and each cell gives its
+  own three sides, twist and heterostrain. Real networks are rarely uniform (heterostrain
+  stretches the cells, and the twist drifts across the field), so the cells are measured
+  one by one rather than forced onto a single lattice.
 - **Lines (panel 3).** Drag from a node to another node several periods along one wall,
   and set the periods to *nodes on the line minus one*. Do this along all three wall
   directions. Counting triangles instead of nodes gives about two per period and
@@ -64,8 +66,11 @@ reads theta 1.73x too high (on HAADF the AB and BA domains look the same, so the
 bright blobs are this pair); the triangle height is 0.87 L (theta 1.15x too high); a
 second-order fringe is L / 2 (theta 2x too high).
 
-If the three periods differ by more than about 5 % (panel 5) the bilayer carries
-heterostrain and a single theta hides it; report the three periods. Near 60 deg
+If the three periods differ by more than a few percent (panel 5) the bilayer carries
+heterostrain. Then the pure-twist formula on the mean period reads the twist wrong (a
+synthetic WS2 cell at 1.00 deg with 0.5 % strain has sides 15.3, 20.2 and 20.6 nm, and
+the formula on their mean gives 0.97 deg); Click nodes mode solves twist and
+heterostrain together. Near 60 deg
 (antiparallel stacking) one stacking grows into hexagons (panel 6): L is the hexagon
 centre-to-centre spacing, not the hexagon edge (L / sqrt(3)).
 
@@ -81,16 +86,18 @@ centre-to-centre spacing, not the hexagon edge (L / sqrt(3)).
    line to select it, Shift-drag always starts a new one, Delete removes the selected one.
    Every line is a separate domain length (new lines start at 1 period); the image's L is
    their mean, with the standard deviation and range.
-   Or switch **Measure by** to **Click nodes** and click every domain node instead: the
-   page fits one lattice to them and shows the fitted lattice over the image (it should
-   sit on the nodes everywhere), each click's residual, the three periods L1, L2, L3 with
-   error bars, their spread, and the twist. Click a node again to remove it, drag to move
-   it. Lines and nodes are kept separately on each image.
+   Or switch **Measure by** to **Click nodes** and click every domain node instead. The
+   nodes are joined into triangular cells, drawn over the image and coloured by their local
+   twist. Each cell's sides L1, L2, L3 are solved for twist and uniaxial heterostrain; the
+   image gets the median cell (twist with its error, heterostrain, the 10-90 % range of local
+   twist, and the pure-twist value for comparison). Slivers at the edge and triangles across
+   a missing node are left out (dashed). Click a node again to remove it, drag to move it.
+   Lines and nodes are kept separately on each image.
 5. Tick "Don't use this one" for any image you want to leave out.
 6. Download the CSV when you're done: one row per line (with its direction), plus the
-   mean, standard deviation and range for its image. **Node CSV** gives one row per
-   clicked node (position, lattice index, residual) with its image's fit (L1, L2, L3,
-   errors, mean L, twist, spread, angle between the lattice vectors, click rms).
+   mean, standard deviation and range for its image. **Node CSV** gives two files:
+   `moire_nodes.csv` (one row per clicked node with its image result) and `moire_cells.csv`
+   (one row per cell: its nodes, sides, angles, twist and heterostrain).
 
 To load a whole set at once, serve a folder with a `manifest.json` (a list of
 `{"file": "...", "nm_per_px": ...}`) and open `index.html?manifest=manifest.json`. Add
