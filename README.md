@@ -1,8 +1,8 @@
 # Moire Twist Ruler
 
 A small browser tool for measuring the moire period and twist angle of twisted 2D
-bilayers. You draw lines across a few domains on each image (one, or as many as the
-image has rows of domains), and it gives you the domain length and the twist. Everything runs locally in your browser; images are not
+bilayers. You draw lines across a few domains on each image, or click every domain node
+and let it fit the lattice, and it gives you the domain length and the twist. Everything runs locally in your browser; images are not
 uploaded anywhere.
 
 **Open it:** https://will700.github.io/moire-twist-ruler/ (or try it with example data:
@@ -33,6 +33,42 @@ published dataset (CC BY 4.0, credited below) and three are synthetic, generated
 script in `tools/`. No private or unpublished data is included. See
 [examples/README.md](examples/README.md) for where each image comes from.
 
+## How to measure a domain
+
+![how to read the moire period: node to node, click every node, span several periods, not domain centres or triangle heights, unequal periods mean heterostrain, hexagon centres for AP stacking](docs/img/how_to_measure.svg)
+
+The moire period L is the distance from one **AA node** (where three domain walls meet)
+to the next node along a wall (panel 1). That is the quantity in the twist formula, and
+it is the right one for three reasons:
+
+- **The nodes are the moire lattice.** Each AA node is a place where the two layers sit
+  atom on atom, so going from one node to the next is exactly one period. Domain centres
+  and wall midpoints are features inside a cell, not lattice points.
+- **Reconstruction does not move the nodes.** Relaxation grows the triangles and sharpens
+  the walls, but the node lattice keeps the period a / (2 sin(theta/2)).
+- **Nodes are sharp.** Three walls meet at a point, so a node can be placed to a pixel or
+  two; domain centres are broad and flat.
+
+The two ways to measure in the ruler:
+
+- **Click nodes (best, panel 2).** Click every node you can see. A lattice is fitted to all
+  of them by least squares, so there is nothing to count, every node adds precision (the
+  error falls roughly as 1 / sqrt(number of nodes)), and you get all three periods at once.
+- **Lines (panel 3).** Drag from a node to another node several periods along one wall,
+  and set the periods to *nodes on the line minus one*. Do this along all three wall
+  directions. Counting triangles instead of nodes gives about two per period and
+  doubles theta.
+
+Common mistakes (panel 4): domain centre to the neighbouring centre is L / sqrt(3), which
+reads theta 1.73x too high (on HAADF the AB and BA domains look the same, so the nearest
+bright blobs are this pair); the triangle height is 0.87 L (theta 1.15x too high); a
+second-order fringe is L / 2 (theta 2x too high).
+
+If the three periods differ by more than about 5 % (panel 5) the bilayer carries
+heterostrain and a single theta hides it; report the three periods. Near 60 deg
+(antiparallel stacking) one stacking grows into hexagons (panel 6): L is the hexagon
+centre-to-centre spacing, not the hexagon edge (L / sqrt(3)).
+
 ## How to use it
 
 1. Open your images (PNG, JPEG or WebP), or drag them onto the page.
@@ -45,9 +81,16 @@ script in `tools/`. No private or unpublished data is included. See
    line to select it, Shift-drag always starts a new one, Delete removes the selected one.
    Every line is a separate domain length (new lines start at 1 period); the image's L is
    their mean, with the standard deviation and range.
+   Or switch **Measure by** to **Click nodes** and click every domain node instead: the
+   page fits one lattice to them and shows the fitted lattice over the image (it should
+   sit on the nodes everywhere), each click's residual, the three periods L1, L2, L3 with
+   error bars, their spread, and the twist. Click a node again to remove it, drag to move
+   it. Lines and nodes are kept separately on each image.
 5. Tick "Don't use this one" for any image you want to leave out.
 6. Download the CSV when you're done: one row per line (with its direction), plus the
-   mean, standard deviation and range for its image.
+   mean, standard deviation and range for its image. **Node CSV** gives one row per
+   clicked node (position, lattice index, residual) with its image's fit (L1, L2, L3,
+   errors, mean L, twist, spread, angle between the lattice vectors, click rms).
 
 To load a whole set at once, serve a folder with a `manifest.json` (a list of
 `{"file": "...", "nm_per_px": ...}`) and open `index.html?manifest=manifest.json`. Add

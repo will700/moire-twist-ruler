@@ -66,6 +66,9 @@ tbody tr.cur{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .lines button.on{border-color:var(--accent);color:var(--accent)}
 .chip.sk{color:var(--skip);border-color:color-mix(in srgb,var(--skip) 50%,transparent)}
 .warn{color:var(--skip)}
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.modes button{border:0;border-radius:0}
+.modes button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
 footer{font-size:.78rem;color:var(--muted)}
 footer a{color:var(--muted)}
 </style>
@@ -111,6 +114,27 @@ footer a{color:var(--muted)}
           <span id="rSrcK" hidden>data</span><span id="rSrc" hidden></span>
         </div>
       </div>
+      <div class="row">
+        <span class="lbl" style="flex-basis:100%">Measure by</span>
+        <span class="modes" role="group" aria-label="Measurement mode">
+          <button type="button" id="mLines" class="on" aria-pressed="true">Lines</button>
+          <button type="button" id="mNodes" aria-pressed="false">Click nodes</button>
+        </span>
+      </div>
+      <div id="nodeCtl" hidden>
+        <div class="readout">
+          <span>nodes</span><span id="fN">-</span>
+          <span>L1, L2, L3</span><span id="fL">-</span>
+          <span>spread</span><span id="fSpread">-</span>
+          <span>angle a1,a2</span><span id="fAng">-</span>
+          <span>click rms</span><span id="fRms">-</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button type="button" id="undoNode" title="Remove the last node (Backspace)">Undo node</button>
+          <label class="row" style="gap:6px;color:var(--muted)"><input type="checkbox" id="showFit" checked style="padding:0"> show fitted lattice</label>
+        </div>
+      </div>
+      <div id="lineCtl">
       <div class="row num">
         <span class="lbl" style="flex-basis:100%">Periods along the selected line</span>
         <button id="nDown" aria-label="Fewer periods">&minus;</button>
@@ -118,6 +142,7 @@ footer a{color:var(--muted)}
         <button id="nUp" aria-label="More periods">+</button>
       </div>
       <div class="lines" id="lineList"></div>
+      </div>
       <label class="skip" id="skipBox"><input type="checkbox" id="skip"> Don't use this one</label>
       <input id="note" type="text" placeholder="note (optional)" aria-label="Note">
       <hr>
@@ -147,10 +172,12 @@ footer a{color:var(--muted)}
         <button id="del" style="margin-left:auto" title="Delete the selected line (Delete key)">Delete line</button>
         <button id="clear" title="Remove every line on this image">Clear all</button>
       </div>
-      <p class="help">Each line you draw <b>measures a moire domain length L</b>; the <b>twist angle is calculated</b> from L. <b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
+      <p class="help" id="helpNodes" hidden>In this mode you <b>click every domain node</b> (AA site or wall crossing) you can see; there is nothing to count. With 3 or more nodes a lattice is <b>fitted to all of them</b> by least squares: the dashed circles are the fit carried across the field (they should sit on the nodes everywhere), and each click gets a residual line drawn 5x longer than it is; red marks a click far off its fitted node. The fit gives the three periods L1, L2, L3 (equal for pure twist; over 5 % apart means heterostrain), their mean L with an error bar, and the twist. Click a node again to remove it, drag it to adjust it; Backspace removes the last one. Lines and nodes are kept separately.</p>
+      <p class="help" id="helpLines">Each line you draw <b>measures a moire domain length L</b>; the <b>twist angle is calculated</b> from L. <b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
         <button class="primary" id="export">Download CSV</button>
-        <button id="exportJson" title="Lines and settings, to reload later">Save session</button>
+        <button id="exportNodes" title="One row per clicked node, with its image's lattice fit">Node CSV</button>
+        <button id="exportJson" title="Lines, nodes and settings, to reload later">Save session</button>
         <button id="importJson" title="Reload a saved session">Load session</button>
         <input id="sessFile" type="file" accept=".json" hidden>
       </div>
@@ -160,11 +187,11 @@ footer a{color:var(--muted)}
   </div>
 
   <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>Domain L (nm), measured</th><th>Twist (deg), from L</th><th>Lines</th><th>L range (nm)</th><th>Status</th><th>Note</th></tr></thead>
+    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>Domain L (nm), measured</th><th>Twist (deg), from L</th><th>Lines</th><th>L range (nm)</th><th>Node fit L (nm)</th><th>Node fit twist</th><th>Nodes</th><th>Status</th><th>Note</th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
 
-  <footer>Each line measures a domain length L = length / periods; each line is a separate measurement; an image's L is the mean of its lines (with the standard deviation). The twist is then calculated from that AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
+  <footer>Each line measures a domain length L = length / periods; each line is a separate measurement; an image's L is the mean of its lines (with the standard deviation). The twist is then calculated from that AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). In node mode the image L is the mean of the three periods of a lattice fitted to all clicked nodes. Heterobilayers (lattice mismatch) are not modelled; heterostrain shows as unequal periods. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
 </div>
 
 <script>
@@ -174,7 +201,7 @@ const cv = $("cv"), ctx = cv.getContext("2d");
 const IM = [];          // {name, url, w, h, img, scale, trueTwist}
 let cur = 0, zoom = 1, W = 600;
 const KEY = "moire-twist-ruler/v1";
-let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "" };
+let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "", mode: "lines" };
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 // optional autosave to a local server: index.html?save=<url> POSTs the whole session after every
 // change (GET on the same url returns the last saved session, used to restore an empty browser)
@@ -195,7 +222,7 @@ async function pushSave() {
     const r = await fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, body: savePayload() });
     if (!r.ok) throw new Error(r.status);
     const j = await r.json().catch(() => ({}));
-    saveState(`saved to disk ${new Date().toLocaleTimeString()}` + (j.lines != null ? ` (${j.lines} lines on ${j.images} images)` : ""));
+    saveState(`saved to disk ${new Date().toLocaleTimeString()}` + (j.lines != null ? ` (${j.lines} lines` + (j.nodes ? `, ${j.nodes} nodes` : "") + ` on ${j.images} images)` : ""));
   } catch (e) { saveState("NOT saved to disk (server unreachable): lines are only in this browser", true); }
 }
 window.addEventListener("beforeunload", () => { if (SAVE && saveTimer) { clearTimeout(saveTimer); navigator.sendBeacon(SAVE, new Blob([savePayload()], { type: "application/json" })); } });
@@ -205,7 +232,7 @@ async function restoreSaved() {
     const j = await r.json(), sv = j.store || {}; let n = 0;
     for (const [k, v] of Object.entries(sv.lines || {})) {
       const mine = store.lines[k] && mig(store.lines[k]);
-      if (!mine || (!mine.segs.length && !mine.skip && !mine.note)) { store.lines[k] = mig(v); n++; }
+      if (!mine || (!mine.segs.length && !(mine.nodes || []).length && !mine.skip && !mine.note)) { store.lines[k] = mig(v); n++; }
     }
     for (const [k, v] of Object.entries(sv.scales || {})) if (store.scales[k] == null) store.scales[k] = v;
     if (n) status(`restored ${n} images' lines from the saved file`);
@@ -214,16 +241,17 @@ async function restoreSaved() {
 
 function aNm() { const v = store.a === "custom" ? parseFloat(store.aCustom) : parseFloat(store.a); return v > 0 ? v : NaN; }
 function twist(L) { const a = aNm(); return 2 * Math.asin(Math.min(a / (2 * L), 1)) * 180 / Math.PI; }
-// per image: { segs: [{x0, y0, x1, y1, n}], act: index of the selected line, skip, note }
+// per image: { segs: [{x0, y0, x1, y1, n}], act: index of the selected line, nodes: [[x, y]] (image px), skip, note }
 function mig(s) {
   if (!Array.isArray(s.segs)) {            // sessions saved by the one-line version
     s.segs = s.x0 != null ? [{ x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1, n: s.n || 1 }] : [];
     s.act = s.segs.length - 1; ["x0", "y0", "x1", "y1", "n"].forEach(k => delete s[k]);
   }
   if (!(s.act >= 0 && s.act < s.segs.length)) s.act = s.segs.length - 1;
+  if (!Array.isArray(s.nodes)) s.nodes = [];
   return s;
 }
-function line(im) { return mig(store.lines[im.name] || (store.lines[im.name] = { segs: [], act: -1, skip: false, note: "" })); }
+function line(im) { return mig(store.lines[im.name] || (store.lines[im.name] = { segs: [], act: -1, nodes: [], skip: false, note: "" })); }
 function sel(s) { return s.segs[s.act] || null; }
 function scaleOf(im) { const s = store.scales[im.name] ?? im.scale; return s > 0 ? s : null; }
 function segCalc(g, k) {
@@ -241,6 +269,57 @@ function calc(im) {
   const L = Ls.reduce((t, v) => t + v, 0) / Ls.length;
   const sd = Ls.length > 1 ? Math.sqrt(Ls.reduce((t, v) => t + (v - L) ** 2, 0) / (Ls.length - 1)) : NaN;
   return { per, len, nn, L, sd, tw: twist(L), Lmin: Math.min(...Ls), Lmax: Math.max(...Ls) };
+}
+
+// ---------- node lattice fit ----------
+// Fit p = o + i a1 + j a2 to every clicked node (image px): guess a1, a2 from nearest-neighbour
+// vectors grouped into the three wall directions, give each node integer (i, j), then least squares
+// for o, a1, a2 (re-indexing a few times). Errors come from the fit covariance.
+const vlen = v => Math.hypot(v[0], v[1]), vsub = (u, v) => [u[0] - v[0], u[1] - v[1]];
+function det3(m) { return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]); }
+function solve3(M, r) { const D = det3(M); if (Math.abs(D) < 1e-9) return null; return [0, 1, 2].map(c => det3(M.map((row, i) => row.map((v, j) => j === c ? r[i] : v))) / D); }
+function guessBasis(P) {
+  const nn = P.map((p, i) => Math.min(...P.map((q, j) => i === j ? Infinity : vlen(vsub(q, p)))));
+  const med = nn.slice().sort((a, b) => a - b)[Math.floor(nn.length / 2)], vs = [];
+  P.forEach((p, i) => P.forEach((q, j) => { if (i !== j) { const v = vsub(q, p); if (vlen(v) < 1.45 * med) vs.push(v); } }));
+  if (!vs.length) return null;
+  const ang = v => ((Math.atan2(v[1], v[0]) * 180 / Math.PI) % 180 + 180) % 180, base = ang(vs[0]), grp = [[], [], []];
+  vs.forEach(v => grp[Math.round((((ang(v) - base) % 180 + 180) % 180) / 60) % 3].push(v));
+  const mean = g => { if (!g.length) return null; const r = g[0]; let t = [0, 0];
+    g.forEach(v => { if (v[0] * r[0] + v[1] * r[1] < 0) v = [-v[0], -v[1]]; t = [t[0] + v[0], t[1] + v[1]]; }); return [t[0] / g.length, t[1] / g.length]; };
+  const m = grp.map(mean).filter(Boolean);
+  if (m.length < 2) { const v = m[0], c = Math.cos(Math.PI / 3), sn = Math.sin(Math.PI / 3); return [v, [c * v[0] - sn * v[1], sn * v[0] + c * v[1]]]; }
+  let [a1, a2] = m; if (a1[0] * a2[0] + a1[1] * a2[1] < 0) a2 = [-a2[0], -a2[1]];
+  return [a1, a2];
+}
+function nodeFit(nodes) {
+  const P = nodes; if (P.length < 3) return null;
+  let B = guessBasis(P); if (!B) return null;
+  const c = P.reduce((t, p) => [t[0] + p[0] / P.length, t[1] + p[1] / P.length], [0, 0]);
+  let o = P.reduce((b, p) => vlen(vsub(p, c)) < vlen(vsub(b, c)) ? p : b, P[0]), idx, res, A;
+  for (let it = 0; it < 4; it++) {
+    const [a1, a2] = B, dt = a1[0] * a2[1] - a1[1] * a2[0]; if (Math.abs(dt) < 1e-6) return null;
+    idx = P.map(p => { const d = vsub(p, o); return [Math.round((d[0] * a2[1] - d[1] * a2[0]) / dt), Math.round((a1[0] * d[1] - a1[1] * d[0]) / dt)]; });
+    A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; const rx = [0, 0, 0], ry = [0, 0, 0];
+    idx.forEach(([i, j], n) => { const row = [1, i, j]; for (let r = 0; r < 3; r++) { for (let q = 0; q < 3; q++) A[r][q] += row[r] * row[q]; rx[r] += row[r] * P[n][0]; ry[r] += row[r] * P[n][1]; } });
+    const sx = solve3(A, rx), sy = solve3(A, ry); if (!sx || !sy) return null;     // all nodes on one line
+    o = [sx[0], sy[0]]; B = [[sx[1], sy[1]], [sx[2], sy[2]]];
+    res = idx.map(([i, j], n) => vsub(P[n], [o[0] + i * B[0][0] + j * B[1][0], o[1] + i * B[0][1] + j * B[1][1]]));
+  }
+  const inv = [0, 1, 2].map(e => solve3(A, [0, 1, 2].map(r => r === e ? 1 : 0)));
+  const keys = idx.map(v => v.join(",")), dup = keys.length - new Set(keys).size;
+  const rms = Math.sqrt(res.reduce((t, r) => t + r[0] * r[0] + r[1] * r[1], 0) / Math.max(1, 2 * P.length - 6));
+  const [a1, a2] = B, a3 = vsub(a2, a1);
+  const sg = [Math.sqrt(inv[1][1]), Math.sqrt(inv[2][2]), Math.sqrt(Math.max(0, inv[1][1] + inv[2][2] - 2 * inv[1][2]))].map(v => rms * v);
+  const angle = Math.acos((a1[0] * a2[0] + a1[1] * a2[1]) / (vlen(a1) * vlen(a2))) * 180 / Math.PI;
+  return { o, a1, a2, idx, res, dup, rms, n: P.length, Lpx: [vlen(a1), vlen(a2), vlen(a3)], sLpx: sg, angle };
+}
+function fitCalc(im) {
+  const s = store.lines[im.name], k = scaleOf(im); if (!s || !k || !(s.nodes || []).length) return null;
+  const f = nodeFit(s.nodes); if (!f) return { n: s.nodes.length, f: null };
+  const L3 = f.Lpx.map(v => v * k), sL3 = f.sLpx.map(v => v * k), L = (L3[0] + L3[1] + L3[2]) / 3;
+  const sL = Math.sqrt(sL3.reduce((t, v) => t + v * v, 0)) / 3, tw = twist(L);
+  return { n: f.n, f, L3, sL3, L, sL, tw, sTw: tw * sL / L, spread: (Math.max(...L3) - Math.min(...L3)) / L * 100, rmsNm: f.rms * k };
 }
 
 // ---------- loading ----------
@@ -327,8 +406,39 @@ function draw() {
   }
   const mono = getComputedStyle(document.body).getPropertyValue("--mono");
   const lab = g => k ? `L ${segCalc(g, k).L.toFixed(2)} nm` : "";
+  const nm = store.mode === "nodes";
+  ctx.globalAlpha = nm ? 0.35 : 1;
   s.segs.forEach((g, i) => { if (i !== s.act) drawSeg(g, i, false, s.skip, mono, lab(g)); });
-  if (sel(s)) drawSeg(sel(s), s.act, true, s.skip, mono, lab(sel(s)));
+  if (sel(s)) drawSeg(sel(s), s.act, !nm, s.skip, mono, lab(sel(s)));
+  ctx.globalAlpha = nm ? 1 : 0.35;
+  drawNodes(s, im, nm);
+  ctx.globalAlpha = 1;
+}
+function drawNodes(s, im, full) {
+  if (!s.nodes.length) return;
+  const f = full ? nodeFit(s.nodes) : null;
+  if (f && $("showFit").checked) {     // fitted lattice over the whole field
+    const { o, a1, a2 } = f, dt = a1[0] * a2[1] - a1[1] * a2[0];
+    const ij = [[0, 0], [im.w, 0], [0, im.h], [im.w, im.h]].map(p => { const d = vsub(p, o); return [(d[0] * a2[1] - d[1] * a2[0]) / dt, (a1[0] * d[1] - a1[1] * d[0]) / dt]; });
+    const i0 = Math.floor(Math.min(...ij.map(v => v[0]))) - 1, i1 = Math.ceil(Math.max(...ij.map(v => v[0]))) + 1;
+    const j0 = Math.floor(Math.min(...ij.map(v => v[1]))) - 1, j1 = Math.ceil(Math.max(...ij.map(v => v[1]))) + 1;
+    if ((i1 - i0) * (j1 - j0) < 40000) {
+      ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5; ctx.strokeStyle = "#6fcf97";
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+        const x = o[0] + i * a1[0] + j * a2[0], y = o[1] + i * a1[1] + j * a2[1];
+        if (x < -2 || y < -2 || x > im.w + 2 || y > im.h + 2) continue;
+        ctx.beginPath(); ctx.arc(toC(x), toC(y), 8, 0, 7); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+  }
+  s.nodes.forEach((p, n) => {
+    const x = toC(p[0]), y = toC(p[1]), r = f ? f.res[n] : null;
+    const bad = f && f.n > 5 && f.rms > 0 && vlen(r) > 2.5 * f.rms;
+    if (r) { ctx.strokeStyle = bad ? "#e07a6a" : "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - toC(5 * r[0]), y - toC(5 * r[1])); ctx.stroke(); }
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.stroke();
+    ctx.fillStyle = bad ? "#e07a6a" : "#ffd23f"; ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill();
+  });
 }
 function drawSeg(g, i, on, skip, mono, lab) {
   const x0 = toC(g.x0), y0 = toC(g.y0), x1 = toC(g.x1), y1 = toC(g.y1), n = g.n || 1;
@@ -367,8 +477,16 @@ function newSeg(s, p) {
   s.segs.push({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, n }); s.act = s.segs.length - 1;
   return { i: s.act, end: "b" };
 }
+let ndrag = null;     // node mode: {n, p0, moved}
+function nodeAt(s, p) { let best = -1, bd = toI(9); s.nodes.forEach((q, n) => { const d = Math.hypot(q[0] - p.x, q[1] - p.y); if (d < bd) { bd = d; best = n; } }); return best; }
 cv.addEventListener("pointerdown", e => {
   if (!IM[cur]) return;
+  if (store.mode === "nodes") {
+    const s = line(IM[cur]), p = pt(e), hit = nodeAt(s, p); cv.setPointerCapture(e.pointerId);
+    if (hit >= 0) ndrag = { n: hit, p0: p, moved: false };
+    else { s.nodes.push([+p.x.toFixed(1), +p.y.toFixed(1)]); ndrag = null; persist(); panel(); draw(); }
+    return;
+  }
   const s = line(IM[cur]), p = pt(e), tol = toI(14), g = sel(s); cv.setPointerCapture(e.pointerId);
   if (e.shiftKey) drag = newSeg(s, p);
   else if (g && Math.hypot(p.x - g.x0, p.y - g.y0) < tol) drag = { i: s.act, end: "a" };
@@ -382,6 +500,9 @@ cv.addEventListener("pointerdown", e => {
   draw(); panel(false);
 });
 cv.addEventListener("pointermove", e => {
+  if (ndrag) { const s = line(IM[cur]), p = pt(e);
+    if (!ndrag.moved && Math.hypot(p.x - ndrag.p0.x, p.y - ndrag.p0.y) < toI(4)) return;
+    ndrag.moved = true; s.nodes[ndrag.n] = [+p.x.toFixed(1), +p.y.toFixed(1)]; draw(); panel(false); return; }
   if (!drag) return; const s = line(IM[cur]), p = pt(e);
   if (drag.pick != null) { if (Math.hypot(p.x - drag.p.x, p.y - drag.p.y) < toI(6)) return; drag = newSeg(s, drag.p); }
   const g = s.segs[drag.i];
@@ -389,6 +510,7 @@ cv.addEventListener("pointermove", e => {
   draw(); panel(false);
 });
 cv.addEventListener("pointerup", () => {
+  if (ndrag) { const s = line(IM[cur]); if (!ndrag.moved) s.nodes.splice(ndrag.n, 1); ndrag = null; persist(); panel(); draw(); return; }
   if (!drag) return; const s = line(IM[cur]);
   if (drag.pick != null) s.act = drag.pick;
   else { const g = s.segs[drag.i]; if (g && Math.hypot(g.x1 - g.x0, g.y1 - g.y0) < toI(6)) { s.segs.splice(drag.i, 1); s.act = s.segs.length - 1; } }
@@ -416,6 +538,21 @@ function panel(full = true) {
     b.className = i === s.act ? "on" : ""; b.innerHTML = `<span>#${i + 1}</span><span>L ${hc.L.toFixed(2)} nm` + (hc.n > 1 ? ` (/${hc.n})` : "") + `</span><span>&theta; ${isFinite(hc.tw) ? hc.tw.toFixed(2) : "-"}&deg;</span>`;
     b.title = `line ${i + 1}: ${hc.len.toFixed(1)} nm over ${hc.n} period(s), direction ${hc.ang.toFixed(0)} deg`;
     b.onclick = () => { s.act = i; persist(); panel(); draw(); }; ll.appendChild(b); });
+  const nm = store.mode === "nodes", fc = fitCalc(im);
+  $("nodeCtl").hidden = !nm; $("lineCtl").hidden = nm; $("helpNodes").hidden = !nm; $("helpLines").hidden = nm;
+  $("mLines").classList.toggle("on", !nm); $("mNodes").classList.toggle("on", nm);
+  $("mLines").setAttribute("aria-pressed", !nm); $("mNodes").setAttribute("aria-pressed", nm);
+  if (nm) {
+    const ok = fc && fc.f;
+    $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : ok ? `${fc.L.toFixed(2)} <small>&plusmn; ${fc.sL.toFixed(2)} nm</small>` : "<small>click 3+ nodes</small>";
+    $("bigT").innerHTML = ok && isFinite(fc.tw) ? `${fc.tw.toFixed(2)} <small>&plusmn; ${fc.sTw.toFixed(2)} deg</small>` : "-";
+    $("lNote").textContent = ok ? `lattice fit to ${fc.n} nodes, mean of L1, L2, L3` : "lattice fit to the nodes you click";
+    $("fN").innerHTML = s.nodes.length + (ok && fc.f.dup ? ` <span class="warn">(${fc.f.dup} share a lattice site)</span>` : "");
+    $("fL").textContent = ok ? fc.L3.map((v, i) => `${v.toFixed(2)}±${fc.sL3[i].toFixed(2)}`).join(", ") + " nm" : s.nodes.length >= 3 && k ? "nodes on one line" : "-";
+    $("fSpread").innerHTML = ok ? `${fc.spread.toFixed(1)} %` + (fc.spread > 5 ? ' <span class="warn">heterostrain?</span>' : "") : "-";
+    $("fAng").textContent = ok ? `${fc.f.angle.toFixed(1)} deg (60 for pure twist)` : "-";
+    $("fRms").innerHTML = ok ? `${fc.rmsNm.toFixed(2)} nm` + (fc.rmsNm / fc.L > 0.15 ? ' <span class="warn">high: check the red nodes</span>' : "") : "-";
+  }
   const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
   if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (${im.refLabel})`;
   $("rSrcK").hidden = $("rSrc").hidden = !im.source; if (im.source) $("rSrc").textContent = im.source;
@@ -432,9 +569,11 @@ function table() {
     const s = store.lines[im.name] ? mig(store.lines[im.name]) : { segs: [] }, c = calc(im), k = scaleOf(im), tr = document.createElement("tr");
     if (i === cur) tr.className = "cur";
     [i + 1, im.name, k ? k.toPrecision(4) : "", k ? (im.w * k).toFixed(1) : "", c ? c.L.toFixed(2) : "", c && isFinite(c.tw) ? c.tw.toFixed(2) : "",
-     c ? c.per.length : "", c ? (c.per.length > 1 ? `${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : c.L.toFixed(2)) : ""].forEach((v, j) => { const td = document.createElement("td"); td.textContent = v; if (j !== 1) td.className = "n"; tr.appendChild(td); });
+     c ? c.per.length : "", c ? (c.per.length > 1 ? `${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : c.L.toFixed(2)) : "",
+     ...(() => { const fc = fitCalc(im); return fc && fc.f ? [`${fc.L.toFixed(2)} ± ${fc.sL.toFixed(2)}`, isFinite(fc.tw) ? fc.tw.toFixed(2) : "", fc.n] : ["", "", s.nodes && s.nodes.length ? s.nodes.length : ""]; })()].forEach((v, j) => { const td = document.createElement("td"); td.textContent = v; if (j !== 1) td.className = "n"; tr.appendChild(td); });
     const td = document.createElement("td"), ch = document.createElement("span");
-    ch.className = "chip " + (s.skip ? "sk" : c ? "ok" : ""); ch.textContent = s.skip ? "don't use" : c ? "measured" : k ? "to do" : "no scale";
+    const fm = fitCalc(im), meas = c || (fm && fm.f);
+    ch.className = "chip " + (s.skip ? "sk" : meas ? "ok" : ""); ch.textContent = s.skip ? "don't use" : meas ? "measured" : k ? "to do" : "no scale";
     td.appendChild(ch); tr.appendChild(td);
     const tn = document.createElement("td"); tn.textContent = s.note || ""; tr.appendChild(tn);
     tr.onclick = () => go(i); tb.appendChild(tr);
@@ -444,14 +583,21 @@ function go(i) { if (!IM.length) return; cur = (i + IM.length) % IM.length; W = 
 function curN() { const g = IM[cur] && sel(line(IM[cur])); return g ? g.n || 1 : 1; }
 function setN(n) { const g = sel(line(IM[cur])); if (!g) { status("draw or select a line first", true); return; }
   g.n = Math.max(1, Math.min(99, Math.round(n) || 1)); persist(); panel(); draw(); }
-function delLine() { if (!IM[cur]) return; const s = line(IM[cur]); if (!sel(s)) return; s.segs.splice(s.act, 1); s.act = s.segs.length - 1; persist(); panel(); draw(); }
+function undoNode() { if (!IM[cur]) return; const s = line(IM[cur]); if (!s.nodes.length) return; s.nodes.pop(); persist(); panel(); draw(); }
+function delLine() { if (!IM[cur]) return; if (store.mode === "nodes") return undoNode(); const s = line(IM[cur]); if (!sel(s)) return; s.segs.splice(s.act, 1); s.act = s.segs.length - 1; persist(); panel(); draw(); }
 $("nPer").addEventListener("change", e => setN(+e.target.value));
 $("nUp").onclick = () => IM[cur] && setN(curN() + 1);
 $("nDown").onclick = () => IM[cur] && setN(curN() - 1);
 $("del").onclick = delLine;
+$("undoNode").onclick = undoNode;
+$("showFit").onchange = draw;
+function setMode(m) { store.mode = m; persist(); if (IM[cur]) { panel(); draw(); } else panel(); }
+$("mLines").onclick = () => setMode("lines");
+$("mNodes").onclick = () => setMode("nodes");
 $("skip").addEventListener("change", e => { if (!IM[cur]) return; line(IM[cur]).skip = e.target.checked; persist(); panel(); draw(); });
 $("note").addEventListener("input", e => { if (!IM[cur]) return; line(IM[cur]).note = e.target.value; persist(); table(); });
-$("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]); if (s.segs.length > 1 && !confirm(`Remove all ${s.segs.length} lines on this image?`)) return;
+$("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]);
+  if (store.mode === "nodes") { if (s.nodes.length > 2 && !confirm(`Remove all ${s.nodes.length} nodes on this image?`)) return; s.nodes = []; persist(); panel(); draw(); return; } if (s.segs.length > 1 && !confirm(`Remove all ${s.segs.length} lines on this image?`)) return;
   s.segs = []; s.act = -1; persist(); panel(); draw(); };
 $("scale").addEventListener("change", e => { if (!IM[cur]) return; const v = parseFloat(e.target.value);
   if (v > 0) store.scales[IM[cur].name] = v; else delete store.scales[IM[cur].name]; persist(); panel(); draw(); });
@@ -493,6 +639,23 @@ $("export").onclick = () => {
         ...img, aNm(), ...["x0", "y0", "x1", "y1"].map(t => g[t].toFixed(1)), s.note || ""].map(q).join(",")); }); });
   download("moire_lines.csv", head.join(",") + "\n" + rows.join("\n") + "\n", "text/csv");
   status("CSV downloaded");
+};
+$("exportNodes").onclick = () => {
+  const q = v => { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const head = ["n", "image", "nm_per_px", "use", "node", "x_px", "y_px", "i", "j", "res_x_px", "res_y_px",
+    "image_nodes", "L1_nm", "L2_nm", "L3_nm", "L1_err_nm", "L2_err_nm", "L3_err_nm", "L_mean_nm", "L_err_nm", "twist_deg", "twist_err_deg",
+    "spread_pct", "angle_a1_a2_deg", "click_rms_nm", "shared_sites", "lattice_a_nm", "note"];
+  const rows = [];
+  IM.forEach((im, i) => { const s = store.lines[im.name] ? mig(store.lines[im.name]) : null; if (!s || !s.nodes.length) return;
+    const fc = fitCalc(im), k = scaleOf(im), ok = fc && fc.f, f3 = v => v.toFixed(3);
+    const img = ok ? [fc.n, ...fc.L3.map(f3), ...fc.sL3.map(f3), f3(fc.L), f3(fc.sL), isFinite(fc.tw) ? f3(fc.tw) : "", isFinite(fc.sTw) ? f3(fc.sTw) : "",
+      fc.spread.toFixed(2), fc.f.angle.toFixed(2), f3(fc.rmsNm), fc.f.dup] : [s.nodes.length, ...Array(15).fill("")];
+    s.nodes.forEach((p, n) => rows.push([i + 1, im.name, k ?? "", s.skip ? "no" : ok ? "yes" : "", n + 1, p[0], p[1],
+      ok ? fc.f.idx[n][0] : "", ok ? fc.f.idx[n][1] : "", ok ? fc.f.res[n][0].toFixed(2) : "", ok ? fc.f.res[n][1].toFixed(2) : "", ...img, aNm(), s.note || ""].map(q).join(",")));
+  });
+  if (!rows.length) { status("no nodes clicked yet", true); return; }
+  download("moire_nodes.csv", head.join(",") + "\n" + rows.join("\n") + "\n", "text/csv");
+  status("node CSV downloaded");
 };
 $("exportJson").onclick = () => download("moire_ruler_session.json", JSON.stringify(store, null, 1), "application/json");
 $("importJson").onclick = () => $("sessFile").click();

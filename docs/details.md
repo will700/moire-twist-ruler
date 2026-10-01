@@ -7,12 +7,29 @@ a homobilayer with lattice constant *a* the twist is
 
     theta = 2 asin(a / 2L)
 
-so L = 18 nm is about 1.0 deg for WS2. Heterobilayers (lattice mismatch) and
-heterostrain are not modelled; with strain the three moire directions differ, so draw
-along the direction you want to report, or measure a few images and compare.
+so L = 18 nm is about 1.0 deg for WS2. Heterobilayers (lattice mismatch) are
+not modelled. Heterostrain is not modelled either, but it shows: the three moire
+directions give different periods (L1, L2, L3 in node mode, or lines along different
+directions), so report them rather than a single twist when they differ by more than a
+few percent.
 
 Measuring across several periods is more precise than one: the error in L shrinks as
 1/n.
+
+### Node lattice fit (Click nodes mode)
+
+The clicked nodes p_k are fitted with one lattice, p_k = o + i_k a1 + j_k a2. A first
+guess of a1 and a2 comes from the nearest-neighbour vectors between clicks, grouped into
+the three wall directions; each click then gets the nearest integer index (i_k, j_k), and
+o, a1, a2 follow by linear least squares (x and y separately, re-indexed four times). The
+three periods are L1 = |a1|, L2 = |a2|, L3 = |a2 - a1|; the reported L is their mean and
+the twist uses that mean. Errors come from the fit covariance with the click scatter
+(residual rms per coordinate, 2n - 6 degrees of freedom) as the noise, so they assume
+the clicks scatter randomly about a perfect lattice; slow twist variation across the
+field shows up as structured residuals and a larger rms, not as a larger error bar.
+Clicks more than 2.5x the rms off their fitted node are drawn red, and two clicks given
+the same index are reported (a double click, or a click on a non-node feature). The
+angle between a1 and a2 is 60 deg for pure twist.
 
 ## Try it on the examples
 
