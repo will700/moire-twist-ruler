@@ -143,6 +143,7 @@ footer a{color:var(--muted)}
         <input id="sessFile" type="file" accept=".json" hidden>
       </div>
       <span class="status" id="status"></span>
+      <span class="status" id="saveState" hidden></span>
     </aside>
   </div>
 
@@ -163,7 +164,41 @@ let cur = 0, zoom = 1, W = 600;
 const KEY = "moire-twist-ruler/v1";
 let store = { lines: {}, scales: {}, a: "0.3153", aCustom: "" };
 try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
-function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+// optional autosave to a local server: index.html?save=<url> POSTs the whole session after every
+// change (GET on the same url returns the last saved session, used to restore an empty browser)
+const SAVE = new URLSearchParams(location.search).get("save");
+let saveTimer = null;
+function persist() {
+  try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+  if (SAVE) { clearTimeout(saveTimer); saveTimer = setTimeout(pushSave, 700); }
+}
+function savePayload() {
+  return JSON.stringify({ saved_at: new Date().toISOString(), page: location.href, lattice_a_nm: aNm(), store,
+    images: IM.map(im => ({ name: im.name, w: im.w, h: im.h, nm_per_px: scaleOf(im) })) });
+}
+function saveState(t, bad) { const el = $("saveState"); if (el) { el.hidden = false; el.textContent = t; el.className = "status" + (bad ? " warn" : ""); } }
+async function pushSave() {
+  saveTimer = null;
+  try {
+    const r = await fetch(SAVE, { method: "POST", headers: { "Content-Type": "application/json" }, body: savePayload() });
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json().catch(() => ({}));
+    saveState(`saved to disk ${new Date().toLocaleTimeString()}` + (j.lines != null ? ` (${j.lines} lines on ${j.images} images)` : ""));
+  } catch (e) { saveState("NOT saved to disk (server unreachable): lines are only in this browser", true); }
+}
+window.addEventListener("beforeunload", () => { if (SAVE && saveTimer) { clearTimeout(saveTimer); navigator.sendBeacon(SAVE, new Blob([savePayload()], { type: "application/json" })); } });
+async function restoreSaved() {
+  try {
+    const r = await fetch(SAVE, { cache: "no-store" }); if (!r.ok) return;
+    const j = await r.json(), sv = j.store || {}; let n = 0;
+    for (const [k, v] of Object.entries(sv.lines || {})) {
+      const mine = store.lines[k] && mig(store.lines[k]);
+      if (!mine || (!mine.segs.length && !mine.skip && !mine.note)) { store.lines[k] = mig(v); n++; }
+    }
+    for (const [k, v] of Object.entries(sv.scales || {})) if (store.scales[k] == null) store.scales[k] = v;
+    if (n) status(`restored ${n} images' lines from the saved file`);
+  } catch (e) {}
+}
 
 function aNm() { const v = store.a === "custom" ? parseFloat(store.aCustom) : parseFloat(store.a); return v > 0 ? v : NaN; }
 function twist(L) { const a = aNm(); return 2 * Math.asin(Math.min(a / (2 * L), 1)) * 180 / Math.PI; }
@@ -441,7 +476,11 @@ $("sessFile").onchange = async e => { const f = e.target.files[0]; e.target.valu
     if (j.a) store.a = j.a; if (j.aCustom) store.aCustom = j.aCustom; persist(); panel(); draw(); status("session loaded; open the same images to see the lines"); }
   catch (err) { status("that file is not a saved session", true); } };
 const mq = new URLSearchParams(location.search).get("manifest");
-if (mq) loadManifest(mq).catch(() => status(`could not load ${mq} (serve the folder with python -m http.server)`, true));
+if (mq) (async () => {
+  if (SAVE) await restoreSaved();
+  await loadManifest(mq).catch(() => status(`could not load ${mq} (serve the folder with python -m http.server)`, true));
+  if (SAVE) pushSave();
+})();
 else if (location.hash === "#examples") $("examples").click();
 </script>
 </body>

@@ -50,7 +50,9 @@ script in `tools/`. No private or unpublished data is included. See
    mean, standard deviation and range for its image.
 
 To load a whole set at once, serve a folder with a `manifest.json` (a list of
-`{"file": "...", "nm_per_px": ...}`) and open `index.html?manifest=manifest.json`.
+`{"file": "...", "nm_per_px": ...}`) and open `index.html?manifest=manifest.json`. Add
+`&save=<url>` to have the page POST the whole session to your own local server after
+every change (and restore from a GET on the same url), so the lines are kept on disk too.
 
 Arrow keys move between images, and + / - change the number of periods. Your lines are
 remembered in the browser, so you can close the tab and come back.
