@@ -188,6 +188,7 @@ footer a{color:var(--muted)}
       <p class="help" id="helpNodes" hidden>In this mode you <b>click every domain node</b> (AA site or wall crossing) you can see; there is nothing to count. Neighbouring nodes are joined into <b>triangular moire cells</b>; each cell's three sides L1 &le; L2 &le; L3 give its <b>local twist and heterostrain</b> (a twisted bilayer with uniaxial heterostrain, solved exactly; the cell colour is its twist). The image result is the median cell. Unequal sides are normal: heterostrain stretches the cells, and the pure-twist formula on the mean L then reads the twist wrong. Dashed grey triangles are not counted (thin slivers at the edge, or a gap where a node is missing); a red node is not in any cell. Click a node again to remove it, drag to adjust; Backspace removes the last one. Lines and nodes are kept separately.</p>
       <p class="help" id="helpLines">Each line you draw <b>measures a moire domain length L</b>; the <b>twist angle is calculated</b> from L. <b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
+        <button class="primary" id="runExport" hidden title="Save, then run the export on the local server (drawn images, statistics, backup)">Export &amp; back up</button>
         <button class="primary" id="export">Download CSV</button>
         <button id="exportNodes" title="moire_nodes.csv (one row per node, with its image result) and moire_cells.csv (one row per cell)">Node CSV</button>
         <button id="exportJson" title="Lines, nodes and settings, to reload later">Save session</button>
@@ -714,6 +715,22 @@ $("exportNodes").onclick = () => {
   setTimeout(() => download("moire_cells.csv", cellRows.join("\n") + "\n", "text/csv"), 400);
   status("moire_nodes.csv and moire_cells.csv downloaded");
 };
+// optional server-side export: index.html?export=<url> shows a button that flushes the autosave and
+// POSTs to <url>; the server's JSON reply {ok, summary, steps: [{name, ok, detail}]} is shown in the status line
+const EXPORT = new URLSearchParams(location.search).get("export");
+if (EXPORT) {
+  $("runExport").hidden = false;
+  $("runExport").onclick = async () => {
+    const b = $("runExport"); b.disabled = true; status("exporting...");
+    try {
+      if (SAVE) { clearTimeout(saveTimer); await pushSave(); }
+      const r = await fetch(EXPORT, { method: "POST" }), j = await r.json();
+      const steps = (j.steps || []).map(x => `${x.ok ? "ok" : "FAILED"}: ${x.name}${x.detail ? " (" + x.detail + ")" : ""}`).join("; ");
+      status((j.summary || (j.ok ? "export done" : "export failed")) + (steps ? " | " + steps : ""), !j.ok);
+    } catch (e) { status("export failed: server unreachable", true); }
+    b.disabled = false;
+  };
+}
 $("exportJson").onclick = () => download("moire_ruler_session.json", JSON.stringify(store, null, 1), "application/json");
 $("importJson").onclick = () => $("sessFile").click();
 $("sessFile").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
