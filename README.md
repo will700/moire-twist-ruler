@@ -1,8 +1,8 @@
 # Moire Twist Ruler
 
 A small browser tool for measuring the moire period and twist angle of twisted 2D
-bilayers. You draw one line across a few domains on each image, and it gives you the
-domain length and the twist. Everything runs locally in your browser; images are not
+bilayers. You draw lines across a few domains on each image (one, or as many as the
+image has rows of domains), and it gives you the domain length and the twist. Everything runs locally in your browser; images are not
 uploaded anywhere.
 
 **Open it:** https://will700.github.io/moire-twist-ruler/ (or try it with example data:
@@ -11,7 +11,8 @@ https://will700.github.io/moire-twist-ruler/#examples)
 ![the ruler: a line drawn across three domains of a twisted MoS2 bilayer, giving L = 20.5 nm and 0.88 deg](docs/img/screenshot.png)
 
 Draw a line from node to node, say how many domains it spans, and you get the domain
-length L and the twist. Every image ends up as one row of a CSV:
+length L and the twist. Draw more lines on the same image and they are pooled (total
+length over total periods). The example readings below, one line per image:
 
 | image | use | line (nm) | periods | L (nm) | twist (deg) | note |
 |---|---|---|---|---|---|---|
@@ -39,8 +40,12 @@ script in `tools/`. No private or unpublished data is included. See
 4. Drag a line from one domain node to another a few domains along, then set how many
    periods the line covers. Circles mark each period so you can check they land on the
    nodes.
+   Drag again to add more lines on the same image (other rows, other directions); click a
+   line to select it, Shift-drag always starts a new one, Delete removes the selected one.
+   The image's L is the total length of its lines over their total periods.
 5. Tick "Don't use this one" for any image you want to leave out.
-6. Download the CSV when you're done.
+6. Download the CSV when you're done: one row per line (with its direction), plus the
+   pooled value and the range for its image.
 
 Arrow keys move between images, and + / - change the number of periods. Your lines are
 remembered in the browser, so you can close the tab and come back.

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Moire Twist Ruler</title>
-<meta name="description" content="Measure moire domain length and twist angle by drawing one line per image. Runs entirely in your browser; images never leave your computer.">
+<meta name="description" content="Measure moire domain length and twist angle by drawing lines across the domains of each image. Runs entirely in your browser; images never leave your computer.">
 <style>
 :root{--bg:#0f1215;--panel:#171b20;--panel2:#1e242b;--ink:#e6e9ec;--muted:#8e98a3;--line:#2b333c;--accent:#ffd23f;--accent-ink:#1a1400;
 --ok:#6fcf97;--skip:#e07a6a;--ghost:#4fc3f7;
@@ -56,6 +56,9 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--panel2)}
 tbody tr.cur{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .chip{font:500 .7rem var(--mono);padding:1px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
 .chip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.lines{display:grid;gap:3px;max-height:180px;overflow-y:auto}
+.lines button{display:grid;grid-template-columns:2.2em 1fr auto;gap:6px;text-align:left;font:.8rem var(--mono);font-variant-numeric:tabular-nums;padding:4px 8px}
+.lines button.on{border-color:var(--accent);color:var(--accent)}
 .chip.sk{color:var(--skip);border-color:color-mix(in srgb,var(--skip) 50%,transparent)}
 .warn{color:var(--skip)}
 footer{font-size:.78rem;color:var(--muted)}
@@ -86,21 +89,23 @@ footer a{color:var(--muted)}
     </div>
     <aside class="side">
       <div>
-        <div class="lbl">Domain length L</div>
+        <div class="lbl">Domain length L (all lines)</div>
         <div class="big" id="bigL">-</div>
         <div class="readout" style="margin-top:8px">
           <span>twist</span><span id="rTw">-</span>
-          <span>line</span><span id="rLine">-</span>
+          <span>lines</span><span id="rLines">-</span>
+          <span>selected</span><span id="rLine">-</span>
           <span id="rTrueK" hidden>reference</span><span id="rTrue" hidden></span>
           <span id="rSrcK" hidden>data</span><span id="rSrc" hidden></span>
         </div>
       </div>
       <div class="row num">
-        <span class="lbl" style="flex-basis:100%">Periods along the line</span>
+        <span class="lbl" style="flex-basis:100%">Periods along the selected line</span>
         <button id="nDown" aria-label="Fewer periods">&minus;</button>
         <input id="nPer" type="number" min="1" max="99" step="1" value="1" aria-label="Periods along the line">
         <button id="nUp" aria-label="More periods">+</button>
       </div>
+      <div class="lines" id="lineList"></div>
       <label class="skip" id="skipBox"><input type="checkbox" id="skip"> Don't use this one</label>
       <input id="note" type="text" placeholder="note (optional)" aria-label="Note">
       <hr>
@@ -127,9 +132,10 @@ footer a{color:var(--muted)}
       <div class="row zoom">
         <span class="lbl">Zoom</span>
         <button data-z="1" class="on">1x</button><button data-z="2">2x</button><button data-z="3">3x</button>
-        <button id="clear" style="margin-left:auto">Clear line</button>
+        <button id="del" style="margin-left:auto" title="Delete the selected line (Delete key)">Delete line</button>
+        <button id="clear" title="Remove every line on this image">Clear all</button>
       </div>
-      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. Drag an end to adjust. Arrow keys change image, + and - change periods.</p>
+      <p class="help"><b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line (as many as you like, e.g. one per row or per direction); the image's L pools them all (total length over total periods). Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
         <button class="primary" id="export">Download CSV</button>
         <button id="exportJson" title="Lines and settings, to reload later">Save session</button>
@@ -141,11 +147,11 @@ footer a{color:var(--muted)}
   </div>
 
   <div class="tblwrap"><table>
-    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>L (nm)</th><th>Twist (deg)</th><th>Periods</th><th>Line (nm)</th><th>Status</th><th>Note</th></tr></thead>
+    <thead><tr><th>#</th><th>Image</th><th>nm / px</th><th>Field (nm)</th><th>L (nm)</th><th>Twist (deg)</th><th>Lines</th><th>L range (nm)</th><th>Status</th><th>Note</th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
 
-  <footer>Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
+  <footer>Each line gives L = length / periods; an image's L is the total length of its lines over their total periods. Twist from the AA-to-AA moire period L of a homobilayer: theta = 2 asin(a / 2L). Heterobilayers (lattice mismatch) and heterostrain are not modelled. Lines are kept in this browser (localStorage) by image name; images are never stored or sent anywhere.</footer>
 </div>
 
 <script>
@@ -161,13 +167,31 @@ function persist() { try { localStorage.setItem(KEY, JSON.stringify(store)); } c
 
 function aNm() { const v = store.a === "custom" ? parseFloat(store.aCustom) : parseFloat(store.a); return v > 0 ? v : NaN; }
 function twist(L) { const a = aNm(); return 2 * Math.asin(Math.min(a / (2 * L), 1)) * 180 / Math.PI; }
-function line(im) { return store.lines[im.name] || (store.lines[im.name] = { n: 1, skip: false, note: "" }); }
+// per image: { segs: [{x0, y0, x1, y1, n}], act: index of the selected line, skip, note }
+function mig(s) {
+  if (!Array.isArray(s.segs)) {            // sessions saved by the one-line version
+    s.segs = s.x0 != null ? [{ x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1, n: s.n || 1 }] : [];
+    s.act = s.segs.length - 1; ["x0", "y0", "x1", "y1", "n"].forEach(k => delete s[k]);
+  }
+  if (!(s.act >= 0 && s.act < s.segs.length)) s.act = s.segs.length - 1;
+  return s;
+}
+function line(im) { return mig(store.lines[im.name] || (store.lines[im.name] = { segs: [], act: -1, skip: false, note: "" })); }
+function sel(s) { return s.segs[s.act] || null; }
 function scaleOf(im) { const s = store.scales[im.name] ?? im.scale; return s > 0 ? s : null; }
+function segCalc(g, k) {
+  const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0) * k, L = len / (g.n || 1);
+  const ang = ((Math.atan2(-(g.y1 - g.y0), g.x1 - g.x0) * 180 / Math.PI) + 180) % 180;
+  return { len, L, tw: twist(L), ang, n: g.n || 1 };
+}
 function calc(im) {
   const s = store.lines[im.name], k = scaleOf(im);
-  if (!s || s.x0 == null || !k) return null;
-  const len = Math.hypot(s.x1 - s.x0, s.y1 - s.y0) * k, L = len / (s.n || 1);
-  return { len, L, tw: twist(L) };
+  if (!s || !k) return null; mig(s);
+  if (!s.segs.length) return null;
+  const per = s.segs.map(g => segCalc(g, k));
+  const len = per.reduce((t, c) => t + c.len, 0), nn = per.reduce((t, c) => t + c.n, 0), L = len / nn;
+  const Ls = per.map(c => c.L);
+  return { per, len, nn, L, tw: twist(L), Lmin: Math.min(...Ls), Lmax: Math.max(...Ls) };
 }
 
 // ---------- loading ----------
@@ -240,35 +264,64 @@ function draw() {
     ctx.fillStyle = "#fff"; ctx.fillRect(16, H - 18, sbw, 5);
     ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--mono"); ctx.fillText(sb + " nm", 16, H - 22);
   }
-  if (s.x0 == null) return;
-  const x0 = toC(s.x0), y0 = toC(s.y0), x1 = toC(s.x1), y1 = toC(s.y1), col = s.skip ? "#e07a6a" : "#ffd23f", n = s.n || 1;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
-  for (let i = 0; i <= n; i++) {
-    const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
-    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
-    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
-  }
+  const mono = getComputedStyle(document.body).getPropertyValue("--mono");
+  s.segs.forEach((g, i) => { if (i !== s.act) drawSeg(g, i, false, s.skip, mono); });
+  if (sel(s)) drawSeg(sel(s), s.act, true, s.skip, mono);
 }
-let drag = null;
+function drawSeg(g, i, on, skip, mono) {
+  const x0 = toC(g.x0), y0 = toC(g.y0), x1 = toC(g.x1), y1 = toC(g.y1), n = g.n || 1;
+  const col = skip ? "#e07a6a" : on ? "#ffd23f" : "#4fc3f7", r = on ? 7 : 5;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.lineWidth = on ? 5 : 4; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.strokeStyle = col; ctx.lineWidth = on ? 2 : 1.5; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  for (let j = 0; j <= n; j++) {
+    const x = x0 + (x1 - x0) * j / n, y = y0 + (y1 - y0) * j / n;
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+    ctx.lineWidth = on ? 2 : 1.5; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+  }
+  const t = String(i + 1); ctx.font = "600 12px " + mono;
+  const lx = x0 + (x0 <= x1 ? -14 : 8), ly = y0 - 10;
+  ctx.fillStyle = "rgba(0,0,0,.75)"; ctx.fillRect(lx - 3, ly - 11, ctx.measureText(t).width + 6, 15);
+  ctx.fillStyle = col; ctx.fillText(t, lx, ly);
+}
+let drag = null;      // {i, end: "a"|"b"} while moving an end; {pick, p} while deciding select vs new line
 function pt(e) { const r = cv.getBoundingClientRect(); return { x: toI(e.clientX - r.left), y: toI(e.clientY - r.top) }; }
+function distSeg(p, g) {
+  const dx = g.x1 - g.x0, dy = g.y1 - g.y0, l2 = dx * dx + dy * dy;
+  const t = l2 ? Math.max(0, Math.min(1, ((p.x - g.x0) * dx + (p.y - g.y0) * dy) / l2)) : 0;
+  return Math.hypot(p.x - g.x0 - t * dx, p.y - g.y0 - t * dy);
+}
+function newSeg(s, p) {
+  const n = sel(s) ? sel(s).n || 1 : 1;
+  s.segs.push({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, n }); s.act = s.segs.length - 1;
+  return { i: s.act, end: "b" };
+}
 cv.addEventListener("pointerdown", e => {
-  const s = line(IM[cur]), p = pt(e), tol = toI(14); cv.setPointerCapture(e.pointerId);
-  if (s.x0 != null && Math.hypot(p.x - s.x0, p.y - s.y0) < tol) drag = "a";
-  else if (s.x0 != null && Math.hypot(p.x - s.x1, p.y - s.y1) < tol) drag = "b";
-  else { s.x0 = s.x1 = p.x; s.y0 = s.y1 = p.y; drag = "b"; }
-  draw();
+  if (!IM[cur]) return;
+  const s = line(IM[cur]), p = pt(e), tol = toI(14), g = sel(s); cv.setPointerCapture(e.pointerId);
+  if (e.shiftKey) drag = newSeg(s, p);
+  else if (g && Math.hypot(p.x - g.x0, p.y - g.y0) < tol) drag = { i: s.act, end: "a" };
+  else if (g && Math.hypot(p.x - g.x1, p.y - g.y1) < tol) drag = { i: s.act, end: "b" };
+  else {
+    // on another line: a click selects it, a drag starts a new line from here
+    let best = -1, bd = toI(9);
+    s.segs.forEach((h, i) => { const d = distSeg(p, h); if (i !== s.act && d < bd) { bd = d; best = i; } });
+    drag = best >= 0 ? { pick: best, p } : newSeg(s, p);
+  }
+  draw(); panel(false);
 });
 cv.addEventListener("pointermove", e => {
   if (!drag) return; const s = line(IM[cur]), p = pt(e);
-  if (drag === "a") { s.x0 = p.x; s.y0 = p.y; } else { s.x1 = p.x; s.y1 = p.y; }
+  if (drag.pick != null) { if (Math.hypot(p.x - drag.p.x, p.y - drag.p.y) < toI(6)) return; drag = newSeg(s, drag.p); }
+  const g = s.segs[drag.i];
+  if (drag.end === "a") { g.x0 = p.x; g.y0 = p.y; } else { g.x1 = p.x; g.y1 = p.y; }
   draw(); panel(false);
 });
 cv.addEventListener("pointerup", () => {
-  if (!drag) return; drag = null; const s = line(IM[cur]);
-  if (Math.hypot(s.x1 - s.x0, s.y1 - s.y0) < toI(6)) s.x0 = s.y0 = s.x1 = s.y1 = null;
-  persist(); panel(); draw();
+  if (!drag) return; const s = line(IM[cur]);
+  if (drag.pick != null) s.act = drag.pick;
+  else { const g = s.segs[drag.i]; if (g && Math.hypot(g.x1 - g.x0, g.y1 - g.y0) < toI(6)) { s.segs.splice(drag.i, 1); s.act = s.segs.length - 1; } }
+  drag = null; persist(); panel(); draw();
 });
 
 // ---------- panel ----------
@@ -282,11 +335,17 @@ function panel(full = true) {
   $("meta").textContent = `${im.w} x ${im.h} px` + (k ? `  ·  ${(im.w * k).toFixed(1)} x ${(im.h * k).toFixed(1)} nm` : "  ·  set the pixel size");
   $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : c ? `${c.L.toFixed(2)} <small>nm</small>` : "<small>draw a line</small>";
   $("rTw").textContent = c && isFinite(c.tw) ? c.tw.toFixed(2) + " deg" : "-";
-  $("rLine").textContent = c ? `${c.len.toFixed(1)} nm over ${s.n}` : "-";
+  $("rLines").textContent = c ? `${c.per.length}, ${c.len.toFixed(1)} nm over ${c.nn} periods` + (c.per.length > 1 ? `, L ${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : "") : "-";
+  const g = sel(s), gc = g && k ? segCalc(g, k) : null;
+  $("rLine").textContent = gc ? `#${s.act + 1}: L ${gc.L.toFixed(2)} nm, ${gc.tw.toFixed(2)} deg, ${gc.len.toFixed(1)} nm / ${gc.n}, at ${gc.ang.toFixed(0)} deg` : "-";
+  const ll = $("lineList"); ll.textContent = "";
+  if (k) s.segs.forEach((h, i) => { const hc = segCalc(h, k), b = document.createElement("button"); b.type = "button";
+    b.className = i === s.act ? "on" : ""; b.innerHTML = `<span>#${i + 1}</span><span>${hc.L.toFixed(2)} nm x ${hc.n}</span><span>${hc.ang.toFixed(0)}&deg;</span>`;
+    b.onclick = () => { s.act = i; persist(); panel(); draw(); }; ll.appendChild(b); });
   const hasT = im.trueTwist > 0; $("rTrueK").hidden = $("rTrue").hidden = !hasT;
   if (hasT) $("rTrue").textContent = `${im.trueTwist} deg (${im.refLabel})`;
   $("rSrcK").hidden = $("rSrc").hidden = !im.source; if (im.source) $("rSrc").textContent = im.source;
-  if (document.activeElement !== $("nPer")) $("nPer").value = s.n || 1;
+  if (document.activeElement !== $("nPer")) $("nPer").value = g ? g.n || 1 : 1;
   $("skip").checked = !!s.skip; $("skipBox").classList.toggle("on", !!s.skip);
   if (document.activeElement !== $("note")) $("note").value = s.note || "";
   if (document.activeElement !== $("scale")) $("scale").value = k ?? "";
@@ -296,10 +355,10 @@ function panel(full = true) {
 function table() {
   const tb = $("tb"); tb.textContent = "";
   IM.forEach((im, i) => {
-    const s = store.lines[im.name] || {}, c = calc(im), k = scaleOf(im), tr = document.createElement("tr");
+    const s = store.lines[im.name] ? mig(store.lines[im.name]) : { segs: [] }, c = calc(im), k = scaleOf(im), tr = document.createElement("tr");
     if (i === cur) tr.className = "cur";
     [i + 1, im.name, k ? k.toPrecision(4) : "", k ? (im.w * k).toFixed(1) : "", c ? c.L.toFixed(2) : "", c && isFinite(c.tw) ? c.tw.toFixed(2) : "",
-     c ? s.n : "", c ? c.len.toFixed(1) : ""].forEach((v, j) => { const td = document.createElement("td"); td.textContent = v; if (j !== 1) td.className = "n"; tr.appendChild(td); });
+     c ? c.per.length : "", c ? (c.per.length > 1 ? `${c.Lmin.toFixed(2)}-${c.Lmax.toFixed(2)}` : c.L.toFixed(2)) : ""].forEach((v, j) => { const td = document.createElement("td"); td.textContent = v; if (j !== 1) td.className = "n"; tr.appendChild(td); });
     const td = document.createElement("td"), ch = document.createElement("span");
     ch.className = "chip " + (s.skip ? "sk" : c ? "ok" : ""); ch.textContent = s.skip ? "don't use" : c ? "measured" : k ? "to do" : "no scale";
     td.appendChild(ch); tr.appendChild(td);
@@ -308,13 +367,18 @@ function table() {
   });
 }
 function go(i) { if (!IM.length) return; cur = (i + IM.length) % IM.length; W = size(); panel(); draw(); }
-function setN(n) { const s = line(IM[cur]); s.n = Math.max(1, Math.min(99, Math.round(n) || 1)); persist(); panel(); draw(); }
+function curN() { const g = IM[cur] && sel(line(IM[cur])); return g ? g.n || 1 : 1; }
+function setN(n) { const g = sel(line(IM[cur])); if (!g) { status("draw or select a line first", true); return; }
+  g.n = Math.max(1, Math.min(99, Math.round(n) || 1)); persist(); panel(); draw(); }
+function delLine() { if (!IM[cur]) return; const s = line(IM[cur]); if (!sel(s)) return; s.segs.splice(s.act, 1); s.act = s.segs.length - 1; persist(); panel(); draw(); }
 $("nPer").addEventListener("change", e => setN(+e.target.value));
-$("nUp").onclick = () => IM[cur] && setN((line(IM[cur]).n || 1) + 1);
-$("nDown").onclick = () => IM[cur] && setN((line(IM[cur]).n || 1) - 1);
+$("nUp").onclick = () => IM[cur] && setN(curN() + 1);
+$("nDown").onclick = () => IM[cur] && setN(curN() - 1);
+$("del").onclick = delLine;
 $("skip").addEventListener("change", e => { if (!IM[cur]) return; line(IM[cur]).skip = e.target.checked; persist(); panel(); draw(); });
 $("note").addEventListener("input", e => { if (!IM[cur]) return; line(IM[cur]).note = e.target.value; persist(); table(); });
-$("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]); s.x0 = s.y0 = s.x1 = s.y1 = null; persist(); panel(); draw(); };
+$("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]); if (s.segs.length > 1 && !confirm(`Remove all ${s.segs.length} lines on this image?`)) return;
+  s.segs = []; s.act = -1; persist(); panel(); draw(); };
 $("scale").addEventListener("change", e => { if (!IM[cur]) return; const v = parseFloat(e.target.value);
   if (v > 0) store.scales[IM[cur].name] = v; else delete store.scales[IM[cur].name]; persist(); panel(); draw(); });
 $("scaleAll").onclick = () => { const v = parseFloat($("scale").value); if (!(v > 0)) { status("enter a pixel size first", true); return; }
@@ -329,8 +393,9 @@ $("prev").onclick = () => go(cur - 1); $("next").onclick = () => go(cur + 1);
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT" && e.target.type !== "checkbox" || e.target.tagName === "SELECT") return;
   if (e.key === "ArrowRight") go(cur + 1); else if (e.key === "ArrowLeft") go(cur - 1);
-  else if ((e.key === "+" || e.key === "=") && IM[cur]) setN((line(IM[cur]).n || 1) + 1);
-  else if (e.key === "-" && IM[cur]) setN((line(IM[cur]).n || 1) - 1);
+  else if ((e.key === "+" || e.key === "=") && IM[cur]) setN(curN() + 1);
+  else if (e.key === "-" && IM[cur]) setN(curN() - 1);
+  else if ((e.key === "Delete" || e.key === "Backspace") && IM[cur]) { e.preventDefault(); delLine(); }
 });
 window.addEventListener("resize", () => { if (IM.length) { W = size(); draw(); } });
 
@@ -342,17 +407,23 @@ function download(name, text, type) {
 $("export").onclick = () => {
   if (!IM.length) { status("nothing to export yet", true); return; }
   const q = v => { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-  const head = ["n", "image", "nm_per_px", "use", "line_nm", "periods", "L_nm", "twist_deg", "lattice_a_nm", "x0_px", "y0_px", "x1_px", "y1_px", "note"];
-  const rows = IM.map((im, i) => { const s = store.lines[im.name] || {}, c = calc(im);
-    return [i + 1, im.name, scaleOf(im) ?? "", s.skip ? "no" : c ? "yes" : "", c ? c.len.toFixed(3) : "", c ? s.n : "", c ? c.L.toFixed(3) : "",
-      c && isFinite(c.tw) ? c.tw.toFixed(3) : "", aNm(), ...["x0", "y0", "x1", "y1"].map(k => s[k] != null ? s[k].toFixed(1) : ""), s.note || ""].map(q).join(","); });
+  const head = ["n", "image", "nm_per_px", "use", "line", "line_nm", "periods", "L_nm", "twist_deg", "angle_deg",
+    "image_lines", "image_L_nm", "image_twist_deg", "image_L_min_nm", "image_L_max_nm", "lattice_a_nm", "x0_px", "y0_px", "x1_px", "y1_px", "note"];
+  const rows = [];
+  IM.forEach((im, i) => { const s = store.lines[im.name] ? mig(store.lines[im.name]) : { segs: [] }, c = calc(im), k = scaleOf(im);
+    const use = s.skip ? "no" : c ? "yes" : "";
+    const img = c ? [c.per.length, c.L.toFixed(3), isFinite(c.tw) ? c.tw.toFixed(3) : "", c.Lmin.toFixed(3), c.Lmax.toFixed(3)] : ["", "", "", "", ""];
+    if (!c) { rows.push([i + 1, im.name, k ?? "", use, "", "", "", "", "", "", ...img, aNm(), "", "", "", "", s.note || ""].map(q).join(",")); return; }
+    s.segs.forEach((g, j) => { const gc = c.per[j];
+      rows.push([i + 1, im.name, k, use, j + 1, gc.len.toFixed(3), gc.n, gc.L.toFixed(3), isFinite(gc.tw) ? gc.tw.toFixed(3) : "", gc.ang.toFixed(1),
+        ...img, aNm(), ...["x0", "y0", "x1", "y1"].map(t => g[t].toFixed(1)), s.note || ""].map(q).join(",")); }); });
   download("moire_lines.csv", head.join(",") + "\n" + rows.join("\n") + "\n", "text/csv");
   status("CSV downloaded");
 };
 $("exportJson").onclick = () => download("moire_ruler_session.json", JSON.stringify(store, null, 1), "application/json");
 $("importJson").onclick = () => $("sessFile").click();
 $("sessFile").onchange = async e => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  try { const j = JSON.parse(await f.text()); Object.assign(store.lines, j.lines || {}); Object.assign(store.scales, j.scales || {});
+  try { const j = JSON.parse(await f.text()); Object.assign(store.lines, j.lines || {}); Object.values(store.lines).forEach(mig); Object.assign(store.scales, j.scales || {});
     if (j.a) store.a = j.a; if (j.aCustom) store.aCustom = j.aCustom; persist(); panel(); draw(); status("session loaded; open the same images to see the lines"); }
   catch (err) { status("that file is not a saved session", true); } };
 if (location.hash === "#examples") $("examples").click();
