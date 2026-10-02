@@ -140,13 +140,15 @@ footer a{color:var(--muted)}
       <div id="cornerCtl" hidden>
         <div class="readout">
           <span>corners</span><span id="kN">-</span>
-          <span>corner spacing</span><span id="kD">-</span>
-          <span>L = &radic;3 &times; spacing</span><span id="kL">-</span>
+          <span>hexagons</span><span id="kD">-</span>
+          <span>L (from area)</span><span id="kL">-</span>
           <span>twist range</span><span id="kT">-</span>
+          <span>shape</span><span id="kS">-</span>
           <span>vs nodes</span><span id="kVs">-</span>
         </div>
         <div class="row" style="margin-top:10px">
-          <button type="button" id="undoCorner" title="Remove the last corner (Backspace)">Undo corner</button>
+          <button type="button" id="closeHex" title="Close the outline you are clicking (Enter, or click its first corner)">Close hexagon</button>
+          <button type="button" id="undoCorner" title="Undo the last corner, or the last hexagon (Backspace)">Undo</button>
         </div>
       </div>
       <div id="nodeCtl" hidden>
@@ -207,7 +209,7 @@ footer a{color:var(--muted)}
         <button id="clear" title="Remove every line on this image">Clear all</button>
       </div>
       <p class="help" id="helpNodes" hidden>In this mode you <b>click every domain node</b> (AA site or wall crossing) you can see; there is nothing to count. Neighbouring nodes are joined into <b>triangular moire cells</b>; each cell's three sides L1 &le; L2 &le; L3 give its <b>local twist and heterostrain</b> (a twisted bilayer with uniaxial heterostrain, solved exactly; the cell colour is its twist). The image result is the median cell. Unequal sides are normal: heterostrain stretches the cells, and the pure-twist formula on the mean L then reads the twist wrong. Dashed grey triangles are not counted (thin slivers at the edge, or a gap where a node is missing); a red node is not in any cell. Click a node again to remove it, drag to adjust; Backspace removes the last one. Lines and nodes are kept separately.</p>
-      <p class="help" id="helpCorners" hidden>In this mode you <b>click the honeycomb points between the nodes</b>: the <b>corners of the hexagons</b> on a hexagonal (rigid) moire, or the <b>centres of the triangles</b> on triangular (relaxed) domains. Neighbouring corners are L / &radic;3 apart, so the corners give a second, independent measure of the moire period L and the twist (pure-twist formula). Corners and nodes are kept separately on the same image: switch between them with the buttons above; the set you are not editing is shown faded. Click a corner again to remove it, drag to adjust; Backspace removes the last one.</p>
+      <p class="help" id="helpCorners" hidden>In this mode you <b>outline each hexagon</b> (one moire cell): click its <b>6 corners</b> in any order, then <b>close</b> it by clicking its first corner again (drawn larger), pressing <b>Enter</b> or <b>Close hexagon</b>. Corners are sorted around the centre when you close, so the order does not matter. For the next hexagon, <b>click the corners it shares</b> with the ones already drawn (they are reused, not duplicated) and add its new ones. Each hexagon gives its own L from its area (L = &radic;(2A / &radic;3)) and twist, and is coloured by it; the image result is the median hexagon. Drag a corner to move it (every hexagon using it follows); <b>right-click</b> deletes a corner; Backspace undoes the last corner, then the last hexagon; Escape drops the open outline. Red corners are not in any hexagon. Corners and nodes are kept separately on the same image.</p>
       <p class="help" id="helpLines">Each line you draw <b>measures a moire domain length L</b>; the <b>twist angle is calculated</b> from L. <b>Drag</b> from one domain node (AA site or wall crossing) to another a few domains away along a row. Set <b>periods</b> to the number of domains the line spans: a circle marks each period, so they should sit on the nodes. <b>Drag again</b> anywhere to add another line: every line is its own domain-length measurement (new lines start at 1 period, so one line across one domain is one length), and the image shows their mean, spread and count. Click a line to select it, drag its ends to adjust; <b>Shift-drag</b> always starts a new line, even on top of another. Arrow keys change image, + and - change periods, Delete removes the selected line.</p>
       <div class="row">
         <button class="primary" id="runExport" hidden title="Save, then run the export on the local server (drawn images, statistics, backup)">Export &amp; back up</button>
@@ -278,7 +280,8 @@ async function restoreSaved() {
 function aNm() { const v = store.a === "custom" ? parseFloat(store.aCustom) : parseFloat(store.a); return v > 0 ? v : NaN; }
 function twist(L) { const a = aNm(); return 2 * Math.asin(Math.min(a / (2 * L), 1)) * 180 / Math.PI; }
 // per image: { segs: [{x0, y0, x1, y1, n}], act: index of the selected line, nodes: [[x, y]] (image px),
-//   corners: [[x, y]] (honeycomb points between the nodes, image px), pattern: "triangular" | "hexagonal" | "none" | "", skip, note }
+//   corners: [[x, y]] (hexagon corners, image px, shared between neighbouring hexagons), hexes: [[corner index, ...]]
+//   (closed outlines, sorted around their centre), open: [corner index, ...] (outline being clicked), pattern: "triangular" | "hexagonal" | "none" | "", skip, note }
 function mig(s) {
   if (!Array.isArray(s.segs)) {            // sessions saved by the one-line version
     s.segs = s.x0 != null ? [{ x0: s.x0, y0: s.y0, x1: s.x1, y1: s.y1, n: s.n || 1 }] : [];
@@ -287,6 +290,8 @@ function mig(s) {
   if (!(s.act >= 0 && s.act < s.segs.length)) s.act = s.segs.length - 1;
   if (!Array.isArray(s.nodes)) s.nodes = [];
   if (!Array.isArray(s.corners)) s.corners = [];
+  if (!Array.isArray(s.hexes)) s.hexes = [];
+  if (!Array.isArray(s.open)) s.open = [];
   return s;
 }
 function line(im) { return mig(store.lines[im.name] || (store.lines[im.name] = { segs: [], act: -1, nodes: [], corners: [], pattern: "", skip: false, note: "" })); }
@@ -401,20 +406,49 @@ function cells(im) {
   return v;
 }
 
-// corners: honeycomb points; each corner's 3 nearest neighbours within 0.7-1.3 x the median spacing
+// corners: each closed outline is one moire cell (hexagon). A regular hexagonal moire cell has area
+// (sqrt3 / 2) L^2, so L = sqrt(2 A / sqrt3); side ratio = longest / shortest side (1 for a regular hexagon)
+function ring(P, h) {                 // outline corners sorted around their centre (click order never matters)
+  const cx = h.reduce((t, i) => t + P[i][0], 0) / h.length, cy = h.reduce((t, i) => t + P[i][1], 0) / h.length;
+  return h.slice().sort((i, j) => Math.atan2(P[i][1] - cy, P[i][0] - cx) - Math.atan2(P[j][1] - cy, P[j][0] - cx));
+}
+function hexStats(P, h, k) {
+  const q = ring(P, h).map(i => P[i]); let A = 0;
+  q.forEach((p, n) => { const r = q[(n + 1) % q.length]; A += p[0] * r[1] - r[0] * p[1]; });
+  A = Math.abs(A) / 2 * k * k;
+  const sides = q.map((p, n) => { const r = q[(n + 1) % q.length]; return Math.hypot(r[0] - p[0], r[1] - p[1]) * k; });
+  return { A, L: Math.sqrt(2 * A / Math.sqrt(3)), ratio: Math.max(...sides) / Math.min(...sides), n: q.length,
+           cx: q.reduce((t, p) => t + p[0], 0) / q.length, cy: q.reduce((t, p) => t + p[1], 0) / q.length };
+}
 function corners(im) {
   const s = store.lines[im.name], k = scaleOf(im), a = aNm();
-  const P = s && s.corners || []; if (P.length < 2 || !k) return null;
-  const pairs = new Map();
-  P.forEach((p, i) => { P.map((q, j) => [j, Math.hypot(q[0] - p[0], q[1] - p[1])]).filter(([j]) => j !== i).sort((x, y) => x[1] - y[1]).slice(0, 3)
-    .forEach(([j, d]) => pairs.set(i < j ? i + "," + j : j + "," + i, d)); });
-  const all = [...pairs.values()].sort((x, y) => x - y); if (!all.length) return null;
-  const m0 = all[all.length >> 1], edges = [...pairs].filter(([, d]) => d > 0.7 * m0 && d < 1.3 * m0).map(([key, d]) => [...key.split(",").map(Number), d]);
-  if (!edges.length) return null;
-  const ds = edges.map(e => e[2] * k).sort((x, y) => x - y), med = arr => { const m = arr.length >> 1; return arr.length % 2 ? arr[m] : (arr[m - 1] + arr[m]) / 2; };
-  const q = f => ds[Math.min(ds.length - 1, Math.max(0, Math.round(f * (ds.length - 1))))];
-  const d = med(ds), L = Math.sqrt(3) * d, tw = x => 2 * Math.asin(Math.min(1, a / (2 * Math.sqrt(3) * x))) * 180 / Math.PI;
-  return { n: P.length, edges, d, L, th: isFinite(a) ? tw(d) : NaN, thLo: tw(q(0.9)), thHi: tw(q(0.1)), dLo: q(0.1), dHi: q(0.9), nEdges: edges.length };
+  if (!s || !k || !(s.hexes || []).length) return null;
+  const tw = L => 2 * Math.asin(Math.min(1, a / (2 * L))) * 180 / Math.PI;
+  const hs = s.hexes.map(h => { const v = hexStats(s.corners, h, k); v.th = isFinite(a) ? tw(v.L) : NaN; return v; });
+  const Ls = hs.map(v => v.L).sort((x, y) => x - y), med = arr => { const m = arr.length >> 1; return arr.length % 2 ? arr[m] : (arr[m - 1] + arr[m]) / 2; };
+  const q = f => Ls[Math.min(Ls.length - 1, Math.max(0, Math.round(f * (Ls.length - 1))))];
+  const L = med(Ls);
+  return { n: s.corners.length, hexes: hs, nHex: hs.length, nOdd: hs.filter(v => v.n !== 6).length, L, th: tw(L),
+           thLo: tw(q(0.9)), thHi: tw(q(0.1)), Llo: q(0.1), Lhi: q(0.9), ratio: med(hs.map(v => v.ratio).sort((x, y) => x - y)) };
+}
+function closeHex() {
+  if (!IM[cur]) return; const s = line(IM[cur]);
+  if (s.open.length < 3) { status("an outline needs 3 or more corners", true); return; }
+  const P = s.corners;
+  s.hexes.push(ring(P, s.open));
+  if (s.open.length !== 6) status(`outline closed with ${s.open.length} corners (a hexagon has 6)`, s.open.length !== 6);
+  s.open = []; persist(); panel(); draw();
+}
+function dropCorner(s, n) {          // delete corner n and every outline that uses it; reindex the rest
+  s.hexes = s.hexes.filter(h => !h.includes(n)); s.open = s.open.filter(i => i !== n);
+  s.corners.splice(n, 1); const fix = i => i > n ? i - 1 : i;
+  s.hexes = s.hexes.map(h => h.map(fix)); s.open = s.open.map(fix);
+}
+function dropUnused(s) { for (let n = s.corners.length - 1; n >= 0; n--) if (!s.open.includes(n) && !s.hexes.some(h => h.includes(n))) dropCorner(s, n); }
+function undoCorner() {
+  if (!IM[cur]) return; const s = line(IM[cur]);
+  if (s.open.length) s.open.pop(); else if (s.hexes.length) s.hexes.pop(); else if (s.corners.length) s.corners.pop(); else return;
+  dropUnused(s); persist(); panel(); draw();
 }
 
 // ---------- loading ----------
@@ -586,13 +620,28 @@ function drawNodes(s, im, full) {
 }
 function drawCorners(s, im, full) {
   if (!s.corners.length) return;
-  const kc = corners(im);
-  if (kc) { ctx.lineWidth = full ? 1.6 : 1.2; ctx.strokeStyle = "rgba(79,195,247,.9)"; ctx.setLineDash([]);
-    kc.edges.forEach(([i, j]) => { const p = s.corners[i], q = s.corners[j]; ctx.beginPath(); ctx.moveTo(toC(p[0]), toC(p[1])); ctx.lineTo(toC(q[0]), toC(q[1])); ctx.stroke(); }); }
-  s.corners.forEach(p => {
-    const x = toC(p[0]), y = toC(p[1]), r = 5;
+  const kc = corners(im), P = s.corners, mono = getComputedStyle(document.body).getPropertyValue("--mono");
+  if (kc) {
+    const wide = kc.thHi - kc.thLo > 0.02, lo = wide ? kc.thLo : kc.th - 0.05, hi = wide ? kc.thHi : kc.th + 0.05;
+    s.hexes.forEach((h, n) => {
+      const v = kc.hexes[n], [r, g, b] = twCol(v.th, lo, hi);
+      ctx.beginPath(); ring(P, h).forEach((i, m) => m ? ctx.lineTo(toC(P[i][0]), toC(P[i][1])) : ctx.moveTo(toC(P[i][0]), toC(P[i][1]))); ctx.closePath();
+      ctx.fillStyle = `rgba(${r},${g},${b},.28)`; ctx.fill();
+      ctx.setLineDash(v.n === 6 ? [] : [6, 4]); ctx.lineWidth = 1.8; ctx.strokeStyle = `rgba(${r},${g},${b},.95)`; ctx.stroke(); ctx.setLineDash([]);
+    });
+    if (full) { ctx.font = "600 11px " + mono;
+      kc.hexes.forEach(v => { const t = v.th.toFixed(2) + "°", w = ctx.measureText(t).width, x = toC(v.cx), y = toC(v.cy);
+        ctx.fillStyle = "rgba(0,0,0,.7)"; ctx.fillRect(x - w / 2 - 3, y - 9, w + 6, 14); ctx.fillStyle = "#fff"; ctx.fillText(t, x - w / 2, y + 2); }); }
+  }
+  if (s.open.length) {          // outline being clicked: dashed, back to its first corner
+    ctx.beginPath(); s.open.forEach((i, m) => m ? ctx.lineTo(toC(P[i][0]), toC(P[i][1])) : ctx.moveTo(toC(P[i][0]), toC(P[i][1])));
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 1.8; ctx.strokeStyle = "rgba(255,210,63,.95)"; ctx.stroke(); ctx.setLineDash([]);
+  }
+  P.forEach((p, n) => {
+    const x = toC(p[0]), y = toC(p[1]), r = n === s.open[0] ? 7 : 5, loose = !s.open.includes(n) && !s.hexes.some(h => h.includes(n));
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
-    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.stroke(); ctx.fillStyle = "#4fc3f7"; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.85)"; ctx.stroke();
+    ctx.fillStyle = s.open.includes(n) ? "#ffd23f" : loose ? "#e07a6a" : "#4fc3f7"; ctx.fill();
   });
 }
 let drag = null;      // {i, end: "a"|"b"} while moving an end; {pick, p} while deciding select vs new line
@@ -612,7 +661,14 @@ function ptsOf(s) { return store.mode === "corners" ? s.corners : s.nodes; }
 function nodeAt(s, p) { let best = -1, bd = toI(9); ptsOf(s).forEach((q, n) => { const d = Math.hypot(q[0] - p.x, q[1] - p.y); if (d < bd) { bd = d; best = n; } }); return best; }
 cv.addEventListener("pointerdown", e => {
   if (!IM[cur]) return;
-  if (store.mode === "nodes" || store.mode === "corners") {
+  if (store.mode === "corners") {
+    const s = line(IM[cur]), p = pt(e), hit = nodeAt(s, p); cv.setPointerCapture(e.pointerId);
+    if (e.button === 2) return;
+    if (hit >= 0) ndrag = { n: hit, p0: p, moved: false, corner: true };
+    else { s.corners.push([+p.x.toFixed(1), +p.y.toFixed(1)]); s.open.push(s.corners.length - 1); ndrag = null; persist(); panel(); draw(); }
+    return;
+  }
+  if (store.mode === "nodes") {
     const s = line(IM[cur]), p = pt(e), hit = nodeAt(s, p); cv.setPointerCapture(e.pointerId);
     if (hit >= 0) ndrag = { n: hit, p0: p, moved: false };
     else { ptsOf(s).push([+p.x.toFixed(1), +p.y.toFixed(1)]); ndrag = null; persist(); panel(); draw(); }
@@ -630,6 +686,13 @@ cv.addEventListener("pointerdown", e => {
   }
   draw(); panel(false);
 });
+cv.addEventListener("contextmenu", e => {
+  if (store.mode !== "corners" || !IM[cur]) return; e.preventDefault();
+  const s = line(IM[cur]), n = nodeAt(s, pt(e)); if (n < 0) return;
+  const used = s.hexes.filter(h => h.includes(n)).length;
+  if (used && !confirm(`Delete this corner and the ${used} outline${used > 1 ? "s" : ""} that use it?`)) return;
+  dropCorner(s, n); persist(); panel(); draw();
+});
 cv.addEventListener("pointermove", e => {
   if (ndrag) { const s = line(IM[cur]), p = pt(e);
     if (!ndrag.moved && Math.hypot(p.x - ndrag.p0.x, p.y - ndrag.p0.y) < toI(4)) return;
@@ -641,6 +704,14 @@ cv.addEventListener("pointermove", e => {
   draw(); panel(false);
 });
 cv.addEventListener("pointerup", () => {
+  if (ndrag && ndrag.corner) {     // a click (no drag) on an existing corner adds it to the outline; the first corner closes it
+    const s = line(IM[cur]), n = ndrag.n, moved = ndrag.moved; ndrag = null;
+    if (!moved) {
+      if (s.open.length >= 3 && n === s.open[0]) { closeHex(); return; }
+      if (s.open.includes(n)) status("that corner is already in this outline; click its first corner (larger) or press Enter to close", true);
+      else s.open.push(n);
+    }
+    persist(); panel(); draw(); return; }
   if (ndrag) { const s = line(IM[cur]); if (!ndrag.moved) ptsOf(s).splice(ndrag.n, 1); ndrag = null; persist(); panel(); draw(); return; }
   if (!drag) return; const s = line(IM[cur]);
   if (drag.pick != null) s.act = drag.pick;
@@ -676,12 +747,15 @@ function panel(full = true) {
   [["pTri", "triangular"], ["pHex", "hexagonal"], ["pNone", "none"]].forEach(([id, v]) => { $(id).classList.toggle("on", s.pattern === v); $(id).setAttribute("aria-pressed", s.pattern === v); });
   if (cm) {
     const kc = corners(im), ok = kc && isFinite(kc.L), fn = cells(im);
-    $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : ok ? `${kc.L.toFixed(2)} <small>nm (&radic;3 &times; corner spacing)</small>` : `<small>click corners: 2+ needed</small>`;
+    $("bigL").innerHTML = !k ? '<small class="warn">set the pixel size</small>' : ok ? `${kc.L.toFixed(2)} <small>nm (median hexagon)</small>` : `<small>click the corners of a hexagon, then close it</small>`;
     $("bigT").innerHTML = ok && isFinite(kc.th) ? `${kc.th.toFixed(2)} <small>deg</small>` : "-";
-    $("lNote").textContent = ok ? `median of ${kc.nEdges} corner-to-corner spacings` : "honeycomb points between the nodes";
-    $("formula").textContent = `θ = 2 asin(a / 2L), L = √3 × corner spacing, a = ${isFinite(aNm()) ? aNm().toFixed(4) + " nm" : "lattice constant"} (pure twist)`;
-    $("kN").textContent = s.corners.length; $("kD").textContent = ok ? `${kc.d.toFixed(2)} nm (10-90 %: ${kc.dLo.toFixed(2)}-${kc.dHi.toFixed(2)})` : "-";
-    $("kL").textContent = ok ? `${kc.L.toFixed(2)} nm` : "-"; $("kT").textContent = ok && isFinite(kc.th) ? `${kc.thLo.toFixed(2)}-${kc.thHi.toFixed(2)} deg (10-90 %)` : "-";
+    $("lNote").textContent = ok ? `median of ${kc.nHex} hexagon${kc.nHex > 1 ? "s" : ""}; L = sqrt(2 A / sqrt3) from each area` : s.open.length ? `${s.open.length} corner${s.open.length > 1 ? "s" : ""} in this outline: click its first corner or press Enter to close` : "each closed outline is one moire cell";
+    $("formula").textContent = `θ = 2 asin(a / 2L), a = ${isFinite(aNm()) ? aNm().toFixed(4) + " nm" : "lattice constant"} (pure twist per hexagon)`;
+    $("kN").textContent = s.corners.length + (s.open.length ? ` (${s.open.length} in the open outline)` : "");
+    $("kD").textContent = kc ? `${kc.nHex}` + (kc.nOdd ? ` (${kc.nOdd} not 6-sided, dashed)` : "") : "-";
+    $("kL").textContent = ok ? `${kc.L.toFixed(2)} nm` + (kc.nHex > 1 ? ` (10-90 %: ${kc.Llo.toFixed(2)}-${kc.Lhi.toFixed(2)})` : "") : "-";
+    $("kT").textContent = ok && kc.nHex > 1 ? `${kc.thLo.toFixed(2)}-${kc.thHi.toFixed(2)} deg; colour purple to yellow` : ok ? `${kc.th.toFixed(2)} deg` : "-";
+    $("kS").textContent = ok ? `longest / shortest side ${kc.ratio.toFixed(2)} (1 = regular)` : "-";
     $("kVs").textContent = fn && fn.n ? `nodes: L ${fn.L.toFixed(2)} nm, twist ${fn.th.toFixed(2)} deg` : "no node cells on this image";
   }
   if (document.activeElement !== $("nu")) $("nu").value = nuVal();
@@ -729,13 +803,14 @@ function curN() { const g = IM[cur] && sel(line(IM[cur])); return g ? g.n || 1 :
 function setN(n) { const g = sel(line(IM[cur])); if (!g) { status("draw or select a line first", true); return; }
   g.n = Math.max(1, Math.min(99, Math.round(n) || 1)); persist(); panel(); draw(); }
 function undoNode() { if (!IM[cur]) return; const s = line(IM[cur]), P = ptsOf(s); if (!P.length) return; P.pop(); persist(); panel(); draw(); }
-function delLine() { if (!IM[cur]) return; if (store.mode === "nodes" || store.mode === "corners") return undoNode(); const s = line(IM[cur]); if (!sel(s)) return; s.segs.splice(s.act, 1); s.act = s.segs.length - 1; persist(); panel(); draw(); }
+function delLine() { if (!IM[cur]) return; if (store.mode === "corners") return undoCorner(); if (store.mode === "nodes") return undoNode(); const s = line(IM[cur]); if (!sel(s)) return; s.segs.splice(s.act, 1); s.act = s.segs.length - 1; persist(); panel(); draw(); }
 $("nPer").addEventListener("change", e => setN(+e.target.value));
 $("nUp").onclick = () => IM[cur] && setN(curN() + 1);
 $("nDown").onclick = () => IM[cur] && setN(curN() - 1);
 $("del").onclick = delLine;
 $("undoNode").onclick = undoNode;
-$("undoCorner").onclick = undoNode;
+$("undoCorner").onclick = undoCorner;
+$("closeHex").onclick = closeHex;
 $("showFit").onchange = draw;
 $("nu").addEventListener("change", e => { const v = parseFloat(e.target.value); store.nu = v >= 0 && v < 0.5 ? v : 0.25; persist(); panel(); draw(); });
 function setMode(m) { store.mode = m; persist(); if (IM[cur]) { panel(); draw(); } else panel(); }
@@ -748,7 +823,7 @@ $("skip").addEventListener("change", e => { if (!IM[cur]) return; line(IM[cur]).
 $("note").addEventListener("input", e => { if (!IM[cur]) return; line(IM[cur]).note = e.target.value; persist(); table(); });
 $("clear").onclick = () => { if (!IM[cur]) return; const s = line(IM[cur]);
   if (store.mode === "nodes") { if (s.nodes.length > 2 && !confirm(`Remove all ${s.nodes.length} nodes on this image?`)) return; s.nodes = []; persist(); panel(); draw(); return; }
-  if (store.mode === "corners") { if (s.corners.length > 2 && !confirm(`Remove all ${s.corners.length} corners on this image?`)) return; s.corners = []; persist(); panel(); draw(); return; } if (s.segs.length > 1 && !confirm(`Remove all ${s.segs.length} lines on this image?`)) return;
+  if (store.mode === "corners") { if (s.corners.length > 2 && !confirm(`Remove all ${s.corners.length} corners and ${s.hexes.length} outlines on this image?`)) return; s.corners = []; s.hexes = []; s.open = []; persist(); panel(); draw(); return; } if (s.segs.length > 1 && !confirm(`Remove all ${s.segs.length} lines on this image?`)) return;
   s.segs = []; s.act = -1; persist(); panel(); draw(); };
 $("scale").addEventListener("change", e => { if (!IM[cur]) return; const v = parseFloat(e.target.value);
   if (v > 0) store.scales[IM[cur].name] = v; else delete store.scales[IM[cur].name]; persist(); panel(); draw(); });
@@ -769,6 +844,8 @@ document.addEventListener("keydown", e => {
   else if ((e.key === "+" || e.key === "=") && IM[cur]) setN(curN() + 1);
   else if (e.key === "-" && IM[cur]) setN(curN() - 1);
   else if ((e.key === "Delete" || e.key === "Backspace") && IM[cur]) { e.preventDefault(); delLine(); }
+  else if (e.key === "Enter" && store.mode === "corners" && IM[cur]) { e.preventDefault(); closeHex(); }
+  else if (e.key === "Escape" && store.mode === "corners" && IM[cur]) { const s = line(IM[cur]); s.open = []; dropUnused(s); persist(); panel(); draw(); }
 });
 window.addEventListener("resize", () => { if (IM.length) { W = size(); draw(); } });
 
