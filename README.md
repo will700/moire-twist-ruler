@@ -54,6 +54,22 @@ published dataset (CC BY 4.0, credited below) and three are synthetic, generated
 script in `tools/`. No private or unpublished data is included. See
 [examples/README.md](examples/README.md) for where each image comes from.
 
+## Benchmark
+
+Checked against every public dataset we found with real images of twisted bilayers and a
+published twist per image (open licences; details, method and reproduction in
+[benchmark/](benchmark/README.md)):
+
+| test | images | median twist error |
+|---|---|---|
+| 4D-STEM dark field, MoS2, parallel and antiparallel, 0.37 to 2.56 deg (Van Winkle et al. 2023), automatic nodes | 23 | 0.03 deg (2.1 %) |
+| STM, twisted bilayer graphene, 4.3 deg (Mesple et al. 2025), automatic AA spots | 1 | 0.18 deg (4 %) |
+| the authors' own clicked sites through the ruler's solver, graphene and MoTe2 (Zhang et al. 2024) | 7 | 0.001 deg |
+
+Heterostrain agrees with the published fits to a median of 0.08 percentage points (4D-STEM) and
+0.003 (clicked sites). The automatic nodes stand in for a person clicking; your own clicks can be
+scored the same way with `benchmark/run_benchmark.py --session`.
+
 ## What you are looking at
 
 ![the regions of a reconstructed twisted bilayer: parallel (near 0 deg) gives triangles of MX and XM stacking meeting at MMXX (AA) nodes; antiparallel (near 60 deg) gives hexagons of XMMX (2H) stacking with XX nodes and MM sites at alternate corners](docs/img/moire_regions.svg)

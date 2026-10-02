@@ -10,3 +10,5 @@ private/
 *.mib
 *.hdf5
 *.h5
+benchmark/node_modules/
+benchmark/package-lock.json

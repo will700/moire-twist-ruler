@@ -1,0 +1,36 @@
+dataset,image,qc,note
+mesple_stm,C020_200mV,ok,every AA spot found (309)
+vanwinkle2023,DS1,partial,only 5 nodes fit in the 100 nm field at 0.37 deg (2 cells)
+vanwinkle2023,DS2,ok,all visible nodes
+vanwinkle2023,DS3,ok,
+vanwinkle2023,DS4,ok,
+vanwinkle2023,DS5,ok,
+vanwinkle2023,DS6,ok,a few edge nodes missed
+vanwinkle2023,DS7,ok,a few edge nodes missed
+vanwinkle2023,DS8,ok,
+vanwinkle2023,DS9,ok,
+vanwinkle2023,DS10,ok,
+vanwinkle2023,DS11,partial,strongly strained corner: some stray and missing nodes
+vanwinkle2023,DS12,ok,
+vanwinkle2023,DS13,ok,some nodes in the noisy left half missed
+vanwinkle2023,DS14,ok,
+vanwinkle2023,DS15,ok,
+vanwinkle2023,DS16,ok,
+vanwinkle2023,DS17,partial,elongated (strained) domains: patchy lattice of domain centres
+vanwinkle2023,DS18,fail,points sit on walls and junctions instead of domain centres (about 1.5 periods across the field)
+vanwinkle2023,DS19,partial,same pixels as DS17
+vanwinkle2023,DS20,fail,same pixels as DS18
+vanwinkle2023,DS21,ok,interior domain centres only (5 cells)
+vanwinkle2023,DS22,ok,
+vanwinkle2023,DS23,ok,
+vanwinkle2023,DS24,ok,
+vanwinkle2023,DS25,ok,interior domain centres only
+vanwinkle2023,DS26,ok,
+zhang_pfm,graphene_PFM1,ok,authors' sites
+zhang_pfm,graphene_PFM2,ok,authors' sites
+zhang_pfm,graphene_PFM3,ok,authors' sites
+zhang_pfm,graphene_PFM4,fail,"deposited sites are about 10.2 nm apart (1.38 deg by pure twist) while the deposited fit says 1.054 deg; the notebook builds this file's triangles from non-neighbour vectors, so the coordinates or their units differ from the fit's; cannot be resolved from the deposit"
+zhang_pfm,MoTe2_PFM1,ok,authors' sites
+zhang_pfm,MoTe2_PFM2,ok,authors' sites
+zhang_pfm,MoTe2_PFM3,ok,authors' sites
+zhang_pfm,MoTe2_PFM4,ok,authors' sites

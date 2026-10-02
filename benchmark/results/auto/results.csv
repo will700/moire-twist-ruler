@@ -1,0 +1,36 @@
+dataset,image,modality,material,stacking,field_nm,ref_twist_deg,ref_twist_err_deg,ref_heterostrain_pct,nodes,cells,L_nm,twist_deg,twist_p10_p90,heterostrain_pct,pure_twist_deg,d_twist_deg,duplicate_of,qc,qc_note
+mesple_stm,C020_200mV,STM topography,graphene/graphene (on SiC),rigid moire,50.0,4.3,,,309,542,3.155,4.4746,4.392-4.541,0.357,4.4682,0.1746,,ok,every AA spot found (309)
+vanwinkle2023,DS1,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,100.0,0.3694,0.0035,0.451,5,2,48.462,0.4072,0.403-0.413,0.338,0.3724,0.0378,,partial,only 5 nodes fit in the 100 nm field at 0.37 deg (2 cells)
+vanwinkle2023,DS2,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,100.0,0.5229,0.0084,0.138,11,9,35.135,0.5193,0.503-0.545,0.151,0.5137,-0.0036,,ok,all visible nodes
+vanwinkle2023,DS3,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.8495,0.0137,0.546,30,36,9.834,1.848,1.751-1.963,0.447,1.8354,-0.0014,,ok,
+vanwinkle2023,DS4,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.8143,0.019,0.453,32,42,10.121,1.8003,1.661-1.989,0.458,1.7834,-0.0139,,ok,
+vanwinkle2023,DS5,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.7692,0.0124,0.472,30,38,10.304,1.7745,1.669-1.844,0.535,1.7516,0.0053,,ok,
+vanwinkle2023,DS6,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.7212,0.0287,0.849,27,35,10.629,1.7394,1.608-1.992,0.76,1.6981,0.0183,,ok,a few edge nodes missed
+vanwinkle2023,DS7,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.2273,0.0159,0.304,14,9,14.47,1.2561,1.148-1.335,0.299,1.2473,0.0288,,ok,a few edge nodes missed
+vanwinkle2023,DS8,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.644,0.0191,0.97,22,23,11.088,1.6838,1.598-1.790,0.877,1.6278,0.0399,,ok,
+vanwinkle2023,DS9,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.3531,0.0166,0.598,17,15,13.233,1.4035,1.315-1.530,0.663,1.364,0.0504,,ok,
+vanwinkle2023,DS10,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.5966,0.0174,0.93,26,32,11.3,1.6632,1.576-1.824,0.929,1.5972,0.0666,,ok,
+vanwinkle2023,DS11,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.9192,0.0167,1.32,35,46,9.465,2.0621,1.863-2.184,1.585,1.907,0.1429,,partial,strongly strained corner: some stray and missing nodes
+vanwinkle2023,DS12,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,50.0,1.193,0.0247,0.581,13,12,15.65,1.1831,1.140-1.330,0.526,1.1533,-0.0099,,ok,
+vanwinkle2023,DS13,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,100.0,0.8563,0.0103,0.62,19,15,21.87,0.8572,0.802-0.983,0.466,0.8253,0.0009,,ok,some nodes in the noisy left half missed
+vanwinkle2023,DS14,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,parallel,100.0,0.818,0.0108,0.319,26,33,22.243,0.8317,0.763-0.911,0.354,0.8114,0.0136,,ok,
+vanwinkle2023,DS15,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,2.5622,0.0196,0.444,64,93,7.065,2.5695,2.371-2.889,0.577,2.5546,0.0073,,ok,
+vanwinkle2023,DS16,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,2.1205,0.0128,0.595,46,67,8.772,2.0769,2.002-2.211,0.575,2.0575,-0.0436,,ok,
+vanwinkle2023,DS17,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.4594,0.0305,1.138,18,17,11.864,1.6168,1.438-1.756,1.09,1.5213,0.1574,,partial,elongated (strained) domains: patchy lattice of domain centres
+vanwinkle2023,DS18,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,100.0,0.5138,0.0373,0.434,7,3,34.068,0.5407,0.530-0.611,0.211,0.5298,0.027,,fail,points sit on walls and junctions instead of domain centres (about 1.5 periods across the field)
+vanwinkle2023,DS19,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.4594,0.0305,1.138,18,17,11.864,1.6168,1.438-1.756,1.09,1.5213,0.1574,DS17,partial,same pixels as DS17
+vanwinkle2023,DS20,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,100.0,0.5138,0.0373,0.434,7,3,34.068,0.5407,0.530-0.611,0.211,0.5298,0.027,DS18,fail,same pixels as DS18
+vanwinkle2023,DS21,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,100.0,0.6524,0.0435,0.5,7,5,29.535,0.648,0.626-0.722,0.425,0.6111,-0.0043,,ok,interior domain centres only (5 cells)
+vanwinkle2023,DS22,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.6883,0.0185,0.588,29,37,10.814,1.6931,1.522-1.843,0.568,1.669,0.0048,,ok,
+vanwinkle2023,DS23,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.3611,0.0325,0.62,21,24,12.511,1.4685,1.258-1.673,0.517,1.4426,0.1074,,ok,
+vanwinkle2023,DS24,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.2256,0.0305,0.472,18,20,14.243,1.2804,1.202-1.409,0.366,1.2672,0.0548,,ok,
+vanwinkle2023,DS25,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,100.0,0.7712,0.0143,0.38,11,11,22.138,0.8274,0.727-0.978,0.267,0.8153,0.0562,,ok,interior domain centres only
+vanwinkle2023,DS26,4D-STEM virtual dark field (Bragg interferometry),MoS2/MoS2,antiparallel,50.0,1.4826,0.0255,0.568,26,33,12.58,1.4492,1.351-1.686,0.409,1.4347,-0.0334,,ok,
+zhang_pfm,graphene_PFM1,PFM (site coordinates),graphene/graphene,parallel,443.0,0.1,0.0009,0.044,15,15,146.476,0.0986,0.097-0.105,0.048,0.0962,-0.0014,,ok,authors' sites
+zhang_pfm,graphene_PFM2,PFM (site coordinates),graphene/graphene,parallel,497.6,0.1285,0.0007,0.051,25,32,111.838,0.1283,0.124-0.132,0.052,0.126,-0.0001,,ok,authors' sites
+zhang_pfm,graphene_PFM3,PFM (site coordinates),graphene/graphene,parallel,195.8,0.5575,0.0007,0.323,69,106,26.172,0.5579,0.548-0.565,0.32,0.5385,0.0003,,ok,authors' sites
+zhang_pfm,graphene_PFM4,PFM (site coordinates),graphene/graphene,parallel,112.0,1.0542,0.0036,0.288,112,184,10.749,1.3146,1.251-1.387,0.186,1.3112,0.2604,,fail,"deposited sites are about 10.2 nm apart (1.38 deg by pure twist) while the deposited fit says 1.054 deg; the notebook builds this file's triangles from non-neighbour vectors, so the coordinates or their units differ from the fit's; cannot be resolved from the deposit"
+zhang_pfm,MoTe2_PFM1,PFM (site coordinates),MoTe2/MoTe2,parallel,254.0,0.5591,0.0038,0.239,56,85,37.291,0.5599,0.510-0.604,0.246,0.5456,0.0008,,ok,authors' sites
+zhang_pfm,MoTe2_PFM2,PFM (site coordinates),MoTe2/MoTe2,parallel,283.7,0.3708,0.0022,0.239,29,40,58.323,0.3697,0.356-0.386,0.239,0.3488,-0.0011,,ok,authors' sites
+zhang_pfm,MoTe2_PFM3,PFM (site coordinates),MoTe2/MoTe2,parallel,282.5,0.2925,0.0038,0.29,17,18,78.848,0.2955,0.274-0.314,0.298,0.258,0.003,,ok,authors' sites
+zhang_pfm,MoTe2_PFM4,PFM (site coordinates),MoTe2/MoTe2,parallel,250.2,0.596,0.0034,0.143,56,85,34.43,0.5956,0.559-0.634,0.14,0.5909,-0.0004,,ok,authors' sites

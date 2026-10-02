@@ -1,0 +1,6 @@
+{
+  "name": "moire-twist-ruler-benchmark",
+  "private": true,
+  "description": "Runs index.html headless to score node sets with the ruler's own solver",
+  "dependencies": { "puppeteer-core": "^24.0.0" }
+}
