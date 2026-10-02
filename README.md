@@ -1,22 +1,33 @@
 # Moire Twist Ruler
 
 A small browser tool for measuring the moire period and twist angle of twisted 2D
-bilayers. You measure the domain length, by clicking every domain node or by drawing lines
-from node to node, and it calculates the twist angle from it. Everything runs locally in
+bilayers. You measure the domain length, by clicking every domain node, outlining hexagons
+or drawing lines from node to node, and it calculates the twist angle from it. Everything runs locally in
 your browser; images are not uploaded anywhere.
 
 **Open it:** https://will700.github.io/moire-twist-ruler/ (or try it with example data:
 https://will700.github.io/moire-twist-ruler/#examples)
 
+**Watch the 30 second demo** (click to play):
+
+[![demo video: drop images in, draw lines, click the domain nodes, the cells fill in coloured by local twist, read L and the twist, export the CSV](docs/demo/poster.jpg)](https://will700.github.io/moire-twist-ruler/docs/demo/moire_twist_ruler_demo.mp4)
+
+It is quick to use: in hands-on testing, about 1,600 domains were labelled by hand in one
+hour.
+
 ![Click nodes mode on a twisted MoS2 example: 26 clicked domain nodes joined into 33 triangular cells, each coloured and labelled by its local twist; the panel shows the measured domain length (22.24 nm, mean cell side), the calculated twist (0.83 deg, cell median), the three periods L1, L2, L3, heterostrain 0.35 %, the 10-90 % range of local twist and the published value 0.818 deg](docs/img/screenshot.jpg)
 
-**Two ways to measure, one answer.** The panel always shows what is measured (1. the
+**Three ways to measure, one answer.** The panel always shows what is measured (1. the
 domain length L) and what is calculated from it (2. the twist angle).
 
 - **Click nodes** (above). Click every domain node you can see. The nodes are joined into
   triangular moire cells, each cell is solved for its own twist and heterostrain and
   coloured by its local twist, and the image gets the median cell. There is nothing to
   count, and a twist that drifts across the field shows up as a colour gradient.
+- **Click corners.** For a hexagonal moire (rigid, larger twist), outline each hexagon by
+  clicking its six corners; corners shared with a neighbouring hexagon are reused. Each
+  hexagon is one moire cell, with L from its area (L = sqrt(2A / sqrt3)) and its own twist,
+  filled by its twist.
 - **Lines** (below). Drag from node to node; each line is its own domain length, labelled
   on the image, with its twist in the list beside it. The image gets the mean, spread and
   count of its lines.
@@ -126,11 +137,19 @@ The diagrams are drawn by `tools/make_measure_diagram.py`.
    image gets the median cell (twist with its error, heterostrain, the 10-90 % range of local
    twist, and the pure-twist value for comparison). Slivers at the edge and triangles across
    a missing node are left out (dashed). Click a node again to remove it, drag to move it.
-   Lines and nodes are kept separately on each image.
-5. **Colour map** switches the display between grey and inferno (display only: the image
+   Or switch to **Click corners** for a hexagonal moire: click the six corners of a
+   hexagon in any order and close it (click its first corner again, Enter or Close
+   hexagon); for the next hexagon click the corners it shares and add its new ones. Drag a
+   corner to move it, right-click to delete it, Backspace undoes, Escape drops an open
+   outline.
+   Lines, nodes and corners are kept separately on each image.
+5. Tag the **pattern in this image**: triangular domains (relaxed, low twist), hexagonal
+   moire (rigid, larger twist) or none / unclear. The tag is kept with the session and the
+   autosave, beside the measurements.
+6. **Colour map** switches the display between grey and inferno (display only: the image
    and the measurements are unchanged), so the page can match inferno-rendered exports.
-6. Tick "Don't use this one" for any image you want to leave out.
-7. Download the CSV when you're done: one row per line (with its direction), plus the
+7. Tick "Don't use this one" for any image you want to leave out.
+8. Download the CSV when you're done: one row per line (with its direction), plus the
    mean, standard deviation and range for its image. **Node CSV** gives two files:
    `moire_nodes.csv` (one row per clicked node with its image result) and `moire_cells.csv`
    (one row per cell: its nodes, sides, angles, twist and heterostrain).
